@@ -86,7 +86,7 @@ def create_football_field(linenumbers=True,
 def try_printing_players():
 
     # Example usage
-    train = pd.read_csv('train.csv/train.csv', low_memory=False)
+    train = pd.read_csv('data/train.csv', low_memory=False)
     fig, ax = create_football_field()
     train.query("PlayId == 20170907000118 and Team == 'away'") \
         .plot(x='X', y='Y', kind='scatter', ax=ax, color='orange', s=30, legend='Away')
