@@ -13,7 +13,16 @@ class NFLDataAPI:
 
         """
         print("Initializing NFLDataAPI...")
-        self.df_weeks, self.df_games, self.df_plays = self.process_data()
+        # self.df_weeks, self.df_games, self.df_plays = self.process_data()
+
+        # self.df_weeks.to_csv("weeks_processed.csv", index=False)
+        # self.df_plays.to_csv("plays_processed.csv", index=False)
+        # self.df_games.to_csv("games_processed.csv", index=False)
+
+        self.df_weeks = pd.read_csv("weeks_processed.csv")
+        self.df_plays = pd.read_csv("plays_processed.csv")
+        self.df_games = pd.read_csv("games_processed.csv")
+
         print("Done with loading the data")
 
     def load_week_data(self, week):
@@ -114,4 +123,25 @@ class NFLDataAPI:
 
         return filtered_df
 
+    def get_data_given_quarter(self, week, gameId, quarter):
+        """
+            This function gives you the relevant gama data for a given matchup in a given week in a given quarter
 
+            Args:
+                week (int): [1..17]
+                matchup (pd dataframe): collumns: ['homeTeamAbbr', 'visitorTeamAbbr', 'gameId']
+
+            Returns:
+                dataframe: dataframe with relevant data given a specific week and specific matchup
+         """
+
+        filtered_playIds = self.df_plays.loc[(self.df_plays['quarter'] == quarter) &
+                                             (self.df_plays['gameId'] == gameId), 'playId']
+
+
+        print(filtered_playIds)
+
+        # Get all data from weeks_processed where playId is in filtered_playIds
+        result = self.df_weeks[self.df_weeks['playId'].isin(filtered_playIds)]
+
+        return result
