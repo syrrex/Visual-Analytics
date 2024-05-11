@@ -6,6 +6,7 @@ from gamefield import GameField
 if __name__ == "__main__":
     #root = tk.Tk()
     api = NFLDataAPI()
-    game_field = GameField()
+
+    #game_field = GameField()
     #app = NFLApp(root, api)
     #root.mainloop()

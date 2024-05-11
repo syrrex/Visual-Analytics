@@ -6,6 +6,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
+
 # Credits: 007Chakraphat - Kaggle
 def create_football_field(linenumbers=True,
                           endzones=True,
@@ -84,7 +85,6 @@ def create_football_field(linenumbers=True,
 
 
 def try_printing_players():
-
     # Example usage
     train = pd.read_csv('data/train.csv', low_memory=False)
     fig, ax = create_football_field()
@@ -95,7 +95,6 @@ def try_printing_players():
     plt.title('Play # 20170907000118')
     plt.legend()
     plt.show()
-
 
     # LOS
     playid = 20181230154157
@@ -111,7 +110,6 @@ def try_printing_players():
     plt.title(f'Play # {playid}')
     plt.legend()
     plt.show()
-
 
     # Another example:
     train2021 = pd.read_csv('data/week11.csv')
@@ -136,9 +134,18 @@ def try_printing_players():
     plt.show()
 
 
-try_printing_players()
+#try_printing_players()
 
 
+
+
+
+
+
+
+
+#df = get_teams_in_specific_week(1)
+#print(df)
 class GameField:
     def __init__(self):
         self.whatever = 0
