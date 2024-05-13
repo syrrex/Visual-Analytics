@@ -25,6 +25,7 @@ df_weeks = nfl_api.df_weeks
 df_plays = nfl_api.df_plays
 df_games = nfl_api.df_games
 
+#for testing
 gameId = 2018090600
 playid = 75
 
@@ -32,6 +33,11 @@ information_data = df_plays[(df_plays['gameId'] == gameId) & (df_plays['playId']
 
 
 random_value_list = [i for i in range(1, 10)]
+away_teams = df_games["visitorTeamAbbr"].unique()
+home_teams = df_games["homeTeamAbbr"].unique()
+gameId_drop = df_games["gameId"]
+playid_drop = df_plays["playId"]
+
 scoreA = int(information_data["preSnapHomeScore"].iloc[0])
 scoreB = int(information_data["preSnapVisitorScore"].iloc[0])
 pass_result = df_plays["passResult"].iloc[0]       
@@ -39,7 +45,7 @@ TotalDistance = df_plays["yardsToGo"].iloc[0]
 YardLine = 0
 Hash = 0
 Result = 0
-Formation = test
+Formation = "test"
 PlayType = 0
 YardsGained = 0
 
@@ -51,16 +57,6 @@ YardsGained = 0
 # from gamefield import create_football_field
 from gamefield_plotly import animate_play
 
-# def gamefield():
-#     train = pd.read_csv('data/train.csv', low_memory=False)
-#     fig, ax = create_football_field()
-#     train.query("PlayId == 20170907000118 and Team == 'away'") \
-#             .plot(x='X', y='Y', kind='scatter', ax=ax, color='orange', s=30, legend='Away')
-#     train.query("PlayId == 20170907000118 and Team == 'home'") \
-#             .plot(x='X', y='Y', kind='scatter', ax=ax, color='blue', s=30, legend='Home')
-#     plt.title('Play # 20170907000118')
-#     plt.legend()
-#     return fig
 
 fig = animate_play(gameId, playid)
 
@@ -92,12 +88,12 @@ app.layout = dbc.Container([
                 id='homeTeam',
                 placeholder='Home team',
                 clearable=False,
-                options=random_value_list),
+                options=home_teams),
             dcc.Dropdown(
                 id='awayTeam',
                 placeholder='Away team',
                 clearable=False,
-                options=random_value_list),
+                options=away_teams),
             dcc.Dropdown(
                 id='down',
                 placeholder='Down:',
@@ -108,11 +104,26 @@ app.layout = dbc.Container([
                 placeholder='Play type',
                 clearable=False,
                 options=random_value_list),
+
             dcc.Dropdown(
                 id='quarter',
                 placeholder='Quarter',
                 clearable=False,
                 options=random_value_list),
+
+            dcc.Dropdown(
+                id='game_id',
+                placeholder='game',
+                clearable=False,
+                options=gameId_drop),
+
+            dcc.Dropdown(
+                id='play_id',
+                placeholder='play',
+                clearable=False,
+                options=playid_drop),
+
+
             dbc.Card(
                 dbc.CardBody("This is some text within a card body"),
                 className="mb-3",
@@ -120,7 +131,7 @@ app.layout = dbc.Container([
             dbc.Button("Show", disabled=True, color="primary", className="mr-1"),
         ], width=4),
         dbc.Col([
-            dcc.Graph(id='bar-graph-plotly', figure=fig),
+            dcc.Graph(id='football-plotly', figure=fig),
             #not necessary for now
             # dcc.Slider(0, 20, 1, 
             #            value=10,
@@ -137,6 +148,46 @@ app.layout = dbc.Container([
     ]),
 
 ])
+
+# Callback for the Teams
+@app.callback(
+    Output("awayTeam", "options"),
+    Input("homeTeam", "value")
+)
+def update_away_team_options(home_team):
+    away_teams = df_games[df_games['homeTeamAbbr'] == home_team]['visitorTeamAbbr'].unique()
+    return away_teams
+
+# Callback for the game_id
+@app.callback(
+    Output("game_id", "options"),
+    Input("homeTeam", "value"),
+    Input("awayTeam", "value")
+)
+def update_game_id_options(home_team, away_team):
+    game_id = df_games[(df_games['homeTeamAbbr'] == home_team) & (df_games['visitorTeamAbbr'] == away_team)]["gameId"].unique()
+    return game_id
+
+
+# Callback for the play_id
+@app.callback(
+    Output("play_id", "options"),
+    Input("game_id", "value")
+)
+def update_play_id_options(game_id):
+    play_id = df_plays[df_plays['gameId'] == game_id]["playId"].unique()
+    return play_id
+
+#Callback for the plot
+@app.callback(
+    Output("football-plotly", "figure"),
+    Output("football-plotly", "config"),
+    Input("game_id", "value"),
+    Input("play_id", "value")
+)
+def update_plot(game_id, play_id):
+    fig = animate_play(game_id, play_id)
+    return fig, {'displayModeBar': False}
 
 # # Create interactivity between dropdown component and graph
 # @app.callback(
