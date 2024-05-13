@@ -290,7 +290,7 @@ def animate_play(gameId, playId):
                     color="white",
                     width=3
                 ),
-                opacity=1,
+                opacity=0.5,
                 showlegend=False,
                 hoverinfo="skip"
             )
