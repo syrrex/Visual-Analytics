@@ -2,10 +2,10 @@ import plotly.graph_objects as go
 import numpy as np
 import pandas as pd
 
-def animate_play(gameId, playId):
+def animate_play(gameId, playId, plays, weeks):
     # Read data from CSV
-    data = pd.read_csv('data/plays.csv', low_memory=False)
-    data1 = pd.read_csv('data/week1.csv', low_memory=False)
+    data = plays
+    data1 = weeks
     
     # Filter data for the specific gameId and playId
     play_data = data1[(data1['gameId'] == gameId) & (data1['playId'] == playId)]
@@ -19,6 +19,16 @@ def animate_play(gameId, playId):
     quarter = information_data.iloc[0]['quarter']
     gameClock = information_data.iloc[0]['gameClock']
     playDescription = "Sample Play Description"
+
+    scale = 8.5
+    marker_size = 23 * (scale / 10)  # Adjust the size of the markers
+    text_size = 13 * (scale / 10)  # Adjust the size of the text
+    title_size = 24 * (scale / 10)  # Adjust the size of the title
+    legend_size = 16 * (scale / 10)  # Adjust the size of the legend
+    annotation_size = 16 * (scale / 10)  # Adjust the size of the annotations
+    field_number_size = 30 * (scale / 10)  # Adjust the size of the field numbers
+    team_name_size = 32 * (scale / 10)  # Adjust the size of the team names
+
 
     # initialize plotly start and stop buttons for animation
     updatemenus_dict = [
@@ -44,7 +54,7 @@ def animate_play(gameId, playId):
             "type": "buttons",
             "x": 0.1,
             "xanchor": "right",
-            "y": 0,
+            "y": -0.15,
             "yanchor": "top"
         }
     ]
@@ -54,16 +64,16 @@ def animate_play(gameId, playId):
         "yanchor": "top",
         "xanchor": "left",
         "currentvalue": {
-            "font": {"size": 20},
+            "font": {"size": 18, "weight": "bold"},  # Set font weight to bold
             "prefix": "Frame:",
             "visible": True,
             "xanchor": "right"
         },
-        "transition": {"duration": 400, "easing": "cubic-in-out"},
+        "transition": {"duration": 200, "easing": "cubic-in-out"},
         "pad": {"b": 10, "t": 50},
         "len": 0.9,
         "x": 0.1,
-        "y": 0,
+        "y": -0.15,
         "steps": []
     }
 
@@ -91,14 +101,14 @@ def animate_play(gameId, playId):
                         mode='markers+text',  # Added '+text' back here
                         marker=go.scatter.Marker(
                             color=team_color,
-                            size=23,  # Increase dot size
+                            size=marker_size,  # Increase dot size
                             line=dict(width=2, color='Black'),
                             opacity=0.8
                         ),
                         text=[str(int((player['jerseyNumber'])))],  # Display jersey number
                         textfont=dict(
                             family="Courier New, monospace",
-                            size=13,  # Increase font size
+                            size=text_size,  # Increase font size
                             color="white",
                             weight="bold"
                         ),
@@ -115,14 +125,14 @@ def animate_play(gameId, playId):
                         mode='markers+text',  # Added '+text' back here
                         marker=go.scatter.Marker(
                             color=team_color,
-                            size=23,  # Increase dot size
+                            size=marker_size,  # Increase dot size
                             line=dict(width=2, color='Black'),
                             opacity=0.8
                         ),
                         text=[str(int((player['jerseyNumber'])))],  # Display jersey number
                         textfont=dict(
                             family="Courier New, monospace",
-                            size=13,  # Increase font size
+                            size=text_size,  # Increase font size
                             color="white",
                             weight="bold"
                         ),
@@ -140,13 +150,13 @@ def animate_play(gameId, playId):
                         mode='markers+text',  # Added '+text' back here
                         marker=go.scatter.Marker(
                             color=team_color,
-                            size=18,  # Increase dot size
+                            size=marker_size,  # Increase dot size
                             line=dict(width=2, color='White')
                         ),
                         text=[str("F")],  # Display jersey number
                         textfont=dict(
                             family="Courier New, monospace",
-                            size=13,  # Increase font size
+                            size=text_size,  # Increase font size
                             color="white",
                             weight="bold"
                         ),
@@ -173,12 +183,11 @@ def animate_play(gameId, playId):
 
 
     #information for figure
-    scale = 10
     layout = go.Layout(
         autosize=False,
         width=120 * scale,
         height=60 * scale,
-        xaxis=dict(range=[0, 120], autorange=False, tickmode='array', tickvals=np.arange(10, 111, 5).tolist(),
+        xaxis=dict(range=[0, 120], autorange=False, tickmode='array', tickvals=np.arange(10, 111, 10).tolist(),
                 showticklabels=False),
         yaxis=dict(range=[0, 53.3], autorange=False, showgrid=False, showticklabels=False),
 
@@ -188,7 +197,7 @@ def animate_play(gameId, playId):
             text=f"GameId: {gameId}, PlayId: {playId}<br>{gameClock} {quarter}Q" + "<br>" * 19 + f"{playDescription}",
             x=0.5,  # Center the title
             font=dict(
-                size=24,  # Increase font size
+                size=title_size,  # Increase font size
                 color='black',
                 family='Courier New, monospace',
                 weight='bold'  # Make the title bold
@@ -205,7 +214,7 @@ def animate_play(gameId, playId):
             borderwidth=1,
             font=dict(
                 family="Courier New, monospace",
-                size=16,
+                size=legend_size,
                 color="black"
             )
     )
@@ -227,7 +236,7 @@ def animate_play(gameId, playId):
             showarrow=False,
             font=dict(
                 family="Courier New, monospace",
-                size=16,
+                size=annotation_size,
                 color="black"
             ),
             align="center",
@@ -237,6 +246,11 @@ def animate_play(gameId, playId):
             bgcolor="#ff7f0e",
             opacity=1
         )
+
+    #lines on the field
+    for x_val in np.arange(15, 111, 10):
+        fig.add_vline(x=x_val, line_width=3, line_color="white", opacity=0.3)
+
     #line of scrimamage
     fig.add_vline(x=line_of_scrimmage, line_width=4, line_dash="dash", line_color="red", opacity=0.7)
 
@@ -251,7 +265,7 @@ def animate_play(gameId, playId):
         mode='text',
         text=list(map(str, list(np.arange(20, 61, 10) - 10) + list(np.arange(40, 9, -10)))),
         textfont=dict(
-            size=30,
+            size=field_number_size,
             family="Courier New, monospace",
             color="#ffffff"
         ),
@@ -267,7 +281,7 @@ def animate_play(gameId, playId):
             mode='text',
             text=list(map(str, list(np.arange(20, 61, 10) - 10) + list(np.arange(40, 9, -10)))),
             textfont=dict(
-                size=30,
+                size=field_number_size,
                 family="Courier New, monospace",
                 color="#ffffff"
             ),
@@ -312,9 +326,29 @@ def animate_play(gameId, playId):
             showarrow=False,
             font=dict(
                 family="Courier New, monospace",
-                size=32,
+                size=team_name_size,
                 color="White"
             ),
             textangle=angle
         )
+    fig.update_layout(
+    legend=dict(
+        x=0.5,
+        y=-0.07,
+        traceorder="normal",
+        font=dict(
+            family="sans-serif",
+            size=text_size,
+            color="black"
+        ),
+        bordercolor="Black",
+        borderwidth=0,
+        orientation="h",
+        xanchor="center",
+        yanchor="top",
+        tracegroupgap=10
+    )
+    )
+
+    
     return fig
