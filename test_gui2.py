@@ -55,17 +55,27 @@ YardsGained = 0
 
 # ##test plot
 # from gamefield import create_football_field
-from gamefield_plotly import animate_play
 
-
-fig = animate_play(gameId, playid)
 
 # Convert matplotlib figure to Plotly figure
 #plotly_fig = tls.mpl_to_plotly(fig)
 
+##slider infos
+# Get the unique play_id values
+play_ids = sorted(playid_drop)
+
+# Create evenly spaced integers for the keys
+keys = range(len(play_ids))
+
+# Create the marks dictionary
+marks = {key: str(play_id) for key, play_id in zip(keys, play_ids)}
+
 
 
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+from gamefield_plotly_2 import animate_play
+fig = animate_play(gameId, playid, df_plays, df_weeks)
+
 app.layout = dbc.Container([
     html.H1("American Football Analysis Application", className='mb-2', style={'textAlign': 'center'}),
 
@@ -131,12 +141,23 @@ app.layout = dbc.Container([
             dbc.Button("Show", disabled=True, color="primary", className="mr-1"),
         ], width=4),
         dbc.Col([
-            dcc.Graph(id='football-plotly', figure=fig),
+            dcc.Graph(id='football-plotly', figure=fig, config={'displayModeBar': False}),
             #not necessary for now
             # dcc.Slider(0, 20, 1, 
             #            value=10,
             #            id="slider"),
             # html.Div(id="slider-output-container"),
+            
+            dcc.Slider(
+            id='play_id_slider',
+            min=min(keys),
+            max=max(keys),
+            value=min(keys),
+            marks={min(keys): str(min(keys)), int(max(keys)/2): str(int(max(keys)/2)), max(keys): str(max(keys))},
+            tooltip={"placement": "bottom","template": "Play {value}", "always_visible": True},
+            step=1,
+            ),
+            html.Div(style={'height': '20px'}),  # Add this line before your dbc.Card
             dbc.Card(
                 dbc.CardBody(f"Distance Endzone: {TotalDistance}, YardLine: {YardLine}, Hash: {Hash}, Result: {Result}, "
                              f"Offense Formation: {Formation}, PlayType: {PlayType}, YardsGained: {YardsGained}"
@@ -168,6 +189,27 @@ def update_game_id_options(home_team, away_team):
     game_id = df_games[(df_games['homeTeamAbbr'] == home_team) & (df_games['visitorTeamAbbr'] == away_team)]["gameId"].unique()
     return game_id
 
+#Callback for the slider
+@app.callback(
+    Output("play_id_slider", "min"),
+    Output("play_id_slider", "max"),
+    Output("play_id_slider", "value"),
+    Output("play_id_slider", "marks"),
+    Input("game_id", "value")
+)
+def update_slider(game_id):
+    play_id = sorted(df_plays[df_plays['gameId'] == game_id]["playId"].unique())
+
+    play_ids = sorted(play_id)
+    # Create evenly spaced integers for the keys
+    keys = range(len(play_ids))
+    # Create the marks dictionary
+    marks = {min(keys): str(min(keys)), int(max(keys)/2): str(int(max(keys)/2)), max(keys): str(max(keys))}
+    min_value = min(keys)
+    max_value = max(keys)
+    value = min(keys)
+    #marks = {key: str(play_id) for key, play_id in zip(keys, play_ids)}
+    return min_value, max_value, value, marks
 
 # Callback for the play_id
 @app.callback(
@@ -178,7 +220,10 @@ def update_play_id_options(game_id):
     play_id = df_plays[df_plays['gameId'] == game_id]["playId"].unique()
     return play_id
 
-#Callback for the plot
+#Callback for the slider output for plot
+
+
+#Callback for the plot drop
 @app.callback(
     Output("football-plotly", "figure"),
     Output("football-plotly", "config"),
@@ -186,7 +231,7 @@ def update_play_id_options(game_id):
     Input("play_id", "value")
 )
 def update_plot(game_id, play_id):
-    fig = animate_play(game_id, play_id)
+    fig = animate_play(game_id, play_id, df_plays, df_weeks)
     return fig, {'displayModeBar': False}
 
 # # Create interactivity between dropdown component and graph
