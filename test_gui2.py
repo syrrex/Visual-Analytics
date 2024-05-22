@@ -73,7 +73,7 @@ marks = {key: str(play_id) for key, play_id in zip(keys, play_ids)}
 
 
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
-from gamefield_plotly_2 import animate_play
+from gamefield_plotly import animate_play
 fig = animate_play(gameId, playid, df_plays, df_weeks)
 
 app.layout = dbc.Container([
