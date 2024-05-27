@@ -1,23 +1,14 @@
 from dash import Dash, html, dcc, Input, Output  # pip install dash
-import plotly.express as px
 import dash_ag_grid as dag  # pip install dash-ag-grid
 import dash_bootstrap_components as dbc  # pip install dash-bootstrap-components
-import pandas as pd  # pip install pandas
 
 import matplotlib  # pip install matplotlib
 
-
 matplotlib.use('agg')
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-import base64
-from io import BytesIO
 
-import plotly.tools as tls
-
-# df = pd.read_csv("https://raw.githubusercontent.com/plotly/datasets/master/solar.csv")
-# #import data
+# import data
 from api import NFLDataAPI
+
 nfl_api = NFLDataAPI()
 
 # # Access df_weeks attribute
@@ -31,16 +22,17 @@ playid = 75
 
 information_data = df_plays[(df_plays['gameId'] == gameId) & (df_plays['playId'] == playid)]
 
-
-random_value_list = [i for i in range(1, 10)]
+random_value_list = df_games["week"].unique()
 away_teams = df_games["visitorTeamAbbr"].unique()
 home_teams = df_games["homeTeamAbbr"].unique()
 gameId_drop = df_games["gameId"]
 playid_drop = df_plays["playId"]
+print(home_teams)
+print(away_teams)
 
 scoreA = int(information_data["preSnapHomeScore"].iloc[0])
 scoreB = int(information_data["preSnapVisitorScore"].iloc[0])
-pass_result = df_plays["passResult"].iloc[0]       
+pass_result = df_plays["passResult"].iloc[0]
 TotalDistance = df_plays["yardsToGo"].iloc[0]
 YardLine = 0
 Hash = 0
@@ -48,7 +40,6 @@ Result = 0
 Formation = "test"
 PlayType = 0
 YardsGained = 0
-
 
 #input for the plot
 
@@ -70,10 +61,9 @@ keys = range(len(play_ids))
 # Create the marks dictionary
 marks = {key: str(play_id) for key, play_id in zip(keys, play_ids)}
 
-
-
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 from gamefield_plotly import animate_play
+
 fig = animate_play(gameId, playid, df_plays, df_weeks)
 
 app.layout = dbc.Container([
@@ -98,6 +88,7 @@ app.layout = dbc.Container([
                 id='homeTeam',
                 placeholder='Home team',
                 clearable=False,
+                disabled=True,
                 options=home_teams),
             dcc.Dropdown(
                 id='awayTeam',
@@ -133,7 +124,6 @@ app.layout = dbc.Container([
                 clearable=False,
                 options=playid_drop),
 
-
             dbc.Card(
                 dbc.CardBody("This is some text within a card body"),
                 className="mb-3",
@@ -147,21 +137,23 @@ app.layout = dbc.Container([
             #            value=10,
             #            id="slider"),
             # html.Div(id="slider-output-container"),
-            
+
             dcc.Slider(
-            id='play_id_slider',
-            min=min(keys),
-            max=max(keys),
-            value=min(keys),
-            marks={min(keys): str(min(keys)), int(max(keys)/2): str(int(max(keys)/2)), max(keys): str(max(keys))},
-            tooltip={"placement": "bottom","template": "Play {value}", "always_visible": True},
-            step=1,
+                id='play_id_slider',
+                min=min(keys),
+                max=max(keys),
+                value=min(keys),
+                marks={min(keys): str(min(keys)), int(max(keys) / 2): str(int(max(keys) / 2)),
+                       max(keys): str(max(keys))},
+                tooltip={"placement": "bottom", "template": "Play {value}", "always_visible": True},
+                step=1,
             ),
             html.Div(style={'height': '20px'}),  # Add this line before your dbc.Card
             dbc.Card(
-                dbc.CardBody(f"Distance Endzone: {TotalDistance}, YardLine: {YardLine}, Hash: {Hash}, Result: {Result}, "
-                             f"Offense Formation: {Formation}, PlayType: {PlayType}, YardsGained: {YardsGained}"
-                             f"Pass Result: {pass_result}"),
+                dbc.CardBody(
+                    f"Distance Endzone: {TotalDistance}, YardLine: {YardLine}, Hash: {Hash}, Result: {Result}, "
+                    f"Offense Formation: {Formation}, PlayType: {PlayType}, YardsGained: {YardsGained}"
+                    f"Pass Result: {pass_result}"),
                 className="mb-3",
             ),
         ], width=12, md=6),
@@ -170,24 +162,89 @@ app.layout = dbc.Container([
 
 ])
 
+
 # Callback for the Teams
 @app.callback(
-    Output("awayTeam", "options"),
-    Input("homeTeam", "value")
+    Output("homeTeam", "options"),
+    Output("homeTeam", "disabled"),
+    Input("week", "value"),
+    Input("awayTeam", "value")
 )
-def update_away_team_options(home_team):
-    away_teams = df_games[df_games['homeTeamAbbr'] == home_team]['visitorTeamAbbr'].unique()
-    return away_teams
+def update_home_team_dropdown(week, away_team):
+    if week:
+        home_teams = df_games[df_games['week'] == week]['homeTeamAbbr'].unique()
+        return [{'label': team, 'value': team} for team in home_teams], False
+    else:
+        # If no week is selected, disable the home team dropdown and clear its options
+        return [], True
+
+
+# @app.callback(
+#     Output("homeTeam", "options"),
+#     Output("homeTeam", "disabled"),
+#     Output("homeTeam", "value"),
+#     Input("week", "value"),
+#     Input("awayTeam", "value")
+# )
+# def update_home_team_dropdown(week, away_team):
+#     if week:
+#         week_data = df_games[df_games['week'] == week]
+#         if away_team:
+#             home_Team = week_data[week_data["visitorTeamAbbr"] == away_team]["homeTeamAbbr"].iloc[0]
+#             return [{'label': home_Team, 'value': home_Team}], False, home_Team
+#         else:
+#             home_teams = week_data["homeTeamAbbr"].unique()
+#             return [{'label': team, 'value': team} for team in home_teams], False, None
+#     elif away_team:
+#         home_Team = df_games[df_games["visitorTeamAbbr"] == away_team]["homeTeamAbbr"].iloc[0]
+#         return [{'label': home_Team, 'value': home_Team}], False, home_Team
+#     else:
+#         home_teams = df_games["homeTeamAbbr"].unique()
+#         return [{'label': team, 'value': team} for team in home_teams], False, None
+
+@app.callback(
+    Output("awayTeam", "options"),
+    Output("awayTeam", "value"),
+    Input("homeTeam", "value"),
+    Input("week", "value")
+)
+def update_away_team_value(selectedHomeTeam, selectedWeek):
+    if selectedWeek:
+        week_data = df_games[df_games['week'] == selectedWeek]
+        if selectedHomeTeam:
+            away_team = week_data[week_data["homeTeamAbbr"] == selectedHomeTeam]["visitorTeamAbbr"].iloc[0]
+            return [{'label': away_team, 'value': away_team}], away_team
+        else:
+            away_teams = week_data["visitorTeamAbbr"].unique()
+            return [{'label': team, 'value': team} for team in away_teams], None
+    elif selectedHomeTeam:
+        away_team = df_games[df_games["homeTeamAbbr"] == selectedHomeTeam]["visitorTeamAbbr"].iloc[0]
+        return [{'label': away_team, 'value': away_team}], away_team
+    else:
+        away_teams = df_games["visitorTeamAbbr"].unique()
+        return [{'label': team, 'value': team} for team in away_teams], None
+
 
 # Callback for the game_id
 @app.callback(
     Output("game_id", "options"),
     Input("homeTeam", "value"),
-    Input("awayTeam", "value")
+    Input("awayTeam", "value"),
+    Input("week", "value")
 )
-def update_game_id_options(home_team, away_team):
-    game_id = df_games[(df_games['homeTeamAbbr'] == home_team) & (df_games['visitorTeamAbbr'] == away_team)]["gameId"].unique()
-    return game_id
+def update_game_id_options(home_team, away_team, week):
+    if home_team and away_team:
+        game_id = df_games[(df_games['homeTeamAbbr'] == home_team) & (df_games['visitorTeamAbbr'] == away_team)][
+            "gameId"].unique()
+    elif week:
+        game_id = df_games[df_games['week'] == week]["gameId"].unique()
+    else:
+        game_id = []
+
+    # Convert game_id to the format expected by the Dropdown options property
+    options = [{'label': str(i), 'value': i} for i in game_id]
+    return options
+
 
 #Callback for the slider
 @app.callback(
@@ -204,12 +261,13 @@ def update_slider(game_id):
     # Create evenly spaced integers for the keys
     keys = range(len(play_ids))
     # Create the marks dictionary
-    marks = {min(keys): str(min(keys)), int(max(keys)/2): str(int(max(keys)/2)), max(keys): str(max(keys))}
+    marks = {min(keys): str(min(keys)), int(max(keys) / 2): str(int(max(keys) / 2)), max(keys): str(max(keys))}
     min_value = min(keys)
     max_value = max(keys)
     value = min(keys)
     #marks = {key: str(play_id) for key, play_id in zip(keys, play_ids)}
     return min_value, max_value, value, marks
+
 
 # Callback for the play_id
 @app.callback(
@@ -219,6 +277,7 @@ def update_slider(game_id):
 def update_play_id_options(game_id):
     play_id = df_plays[df_plays['gameId'] == game_id]["playId"].unique()
     return play_id
+
 
 #Callback for the slider output for plot
 
@@ -233,6 +292,7 @@ def update_play_id_options(game_id):
 def update_plot(game_id, play_id):
     fig = animate_play(game_id, play_id, df_plays, df_weeks)
     return fig, {'displayModeBar': False}
+
 
 # # Create interactivity between dropdown component and graph
 # @app.callback(
