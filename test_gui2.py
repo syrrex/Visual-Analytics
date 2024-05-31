@@ -16,7 +16,7 @@ df_weeks = nfl_api.df_weeks
 df_plays = nfl_api.df_plays
 df_games = nfl_api.df_games
 
-#for testing
+# for testing
 gameId = 2018090600
 playid = 75
 
@@ -27,8 +27,10 @@ away_teams = df_games["visitorTeamAbbr"].unique()
 home_teams = df_games["homeTeamAbbr"].unique()
 gameId_drop = df_games["gameId"]
 playid_drop = df_plays["playId"]
-print(home_teams)
-print(away_teams)
+quarter_list = [1, 2, 3, 4]
+
+selected_gameId, selected_playId = None, None
+
 
 scoreA = int(information_data["preSnapHomeScore"].iloc[0])
 scoreB = int(information_data["preSnapVisitorScore"].iloc[0])
@@ -41,7 +43,7 @@ Formation = "test"
 PlayType = 0
 YardsGained = 0
 
-#input for the plot
+# input for the plot
 
 
 # ##test plot
@@ -49,7 +51,7 @@ YardsGained = 0
 
 
 # Convert matplotlib figure to Plotly figure
-#plotly_fig = tls.mpl_to_plotly(fig)
+# plotly_fig = tls.mpl_to_plotly(fig)
 
 ##slider infos
 # Get the unique play_id values
@@ -88,7 +90,6 @@ app.layout = dbc.Container([
                 id='homeTeam',
                 placeholder='Home team',
                 clearable=False,
-                disabled=True,
                 options=home_teams),
             dcc.Dropdown(
                 id='awayTeam',
@@ -107,32 +108,33 @@ app.layout = dbc.Container([
                 options=random_value_list),
 
             dcc.Dropdown(
-                id='quarter',
-                placeholder='Quarter',
-                clearable=False,
-                options=random_value_list),
-
-            dcc.Dropdown(
                 id='game_id',
                 placeholder='game',
                 clearable=False,
                 options=gameId_drop),
 
             dcc.Dropdown(
+                id='quarter',
+                placeholder='Quarter',
+                clearable=False,
+                options=quarter_list),
+
+            dcc.Dropdown(
                 id='play_id',
                 placeholder='play',
                 clearable=False,
-                options=playid_drop),
+                disabled=True),
 
             dbc.Card(
                 dbc.CardBody("This is some text within a card body"),
                 className="mb-3",
             ),
-            dbc.Button("Show", disabled=True, color="primary", className="mr-1"),
+            dbc.Button("Show", id="showButton", disabled=True,
+                       color="primary", className="mr-1", n_clicks=0),
         ], width=4),
         dbc.Col([
             dcc.Graph(id='football-plotly', figure=fig, config={'displayModeBar': False}),
-            #not necessary for now
+            # not necessary for now
             # dcc.Slider(0, 20, 1, 
             #            value=10,
             #            id="slider"),
@@ -166,17 +168,21 @@ app.layout = dbc.Container([
 # Callback for the Teams
 @app.callback(
     Output("homeTeam", "options"),
-    Output("homeTeam", "disabled"),
-    Input("week", "value"),
-    Input("awayTeam", "value")
+    Output("homeTeam", "value"),
+    Input("week", "value")
 )
-def update_home_team_dropdown(week, away_team):
+def update_home_team_dropdown(week):
     if week:
         home_teams = df_games[df_games['week'] == week]['homeTeamAbbr'].unique()
-        return [{'label': team, 'value': team} for team in home_teams], False
+        print(home_teams)
+        return [{'label': team, 'value': team} for team in home_teams], None
+    # if game_Id:
+    #     print(game_Id)
+    #     home_teams = df_games[df_games['gameId'] == game_Id]['homeTeamAbbr'].unique()
+    #     return [{'label': team, 'value': team} for team in home_teams], home_teams[0]
     else:
         # If no week is selected, disable the home team dropdown and clear its options
-        return [], True
+        return df_games["homeTeamAbbr"].unique(), None
 
 
 # @app.callback(
@@ -218,35 +224,103 @@ def update_away_team_value(selectedHomeTeam, selectedWeek):
             away_teams = week_data["visitorTeamAbbr"].unique()
             return [{'label': team, 'value': team} for team in away_teams], None
     elif selectedHomeTeam:
-        away_team = df_games[df_games["homeTeamAbbr"] == selectedHomeTeam]["visitorTeamAbbr"].iloc[0]
-        return [{'label': away_team, 'value': away_team}], away_team
+        away_teams = df_games[df_games["homeTeamAbbr"] == selectedHomeTeam]["visitorTeamAbbr"]
+        # return [{'label': away_teams, 'value': away_teams}], away_teams
+        return [{'label': team, 'value': team} for team in away_teams], None
     else:
         away_teams = df_games["visitorTeamAbbr"].unique()
         return [{'label': team, 'value': team} for team in away_teams], None
 
 
-# Callback for the game_id
+# # Callback for the game_id
+# @app.callback(
+#     Output("game_id", "options"),
+#     Output("game_id", "value"),
+#     Input("homeTeam", "value"),
+#     Input("awayTeam", "value"),
+#     Input("week", "value")
+# )
+# def update_game_id_options(home_team, away_team, week):
+#     if home_team and away_team and week:
+#         game_id = df_games[(df_games['homeTeamAbbr'] == home_team) & (df_games['visitorTeamAbbr'] == away_team)][
+#             "gameId"].unique()
+#         return game_id, game_id
+#     elif week and not home_team or not away_team:
+#         game_id = df_games[df_games['week'] == week]["gameId"].unique()
+#         return game_id, None
+#     else:
+#         return df_games["gameId"].unique(), None
+
+
 @app.callback(
     Output("game_id", "options"),
+    Output("game_id", "value"),
     Input("homeTeam", "value"),
     Input("awayTeam", "value"),
     Input("week", "value")
 )
 def update_game_id_options(home_team, away_team, week):
-    if home_team and away_team:
-        game_id = df_games[(df_games['homeTeamAbbr'] == home_team) & (df_games['visitorTeamAbbr'] == away_team)][
-            "gameId"].unique()
+    if home_team and away_team and week:
+        game_id = df_games[(df_games['homeTeamAbbr'] == home_team) & (df_games['visitorTeamAbbr'] == away_team) & (
+                df_games['week'] == week)]["gameId"].unique()
+        if len(game_id) > 0:
+            return [{'label': id, 'value': id} for id in game_id], game_id[0]
+        else:
+            return [], None
     elif week:
-        game_id = df_games[df_games['week'] == week]["gameId"].unique()
+        game_ids = df_games[df_games['week'] == week]["gameId"].unique()
+        return [{'label': id, 'value': id} for id in game_ids], None
+    elif home_team:
+        game_ids = df_games[df_games["homeTeamAbbr"] == home_team]["gameId"].unique()
+        return [{'label': id, 'value': id} for id in game_ids], None
     else:
-        game_id = []
-
-    # Convert game_id to the format expected by the Dropdown options property
-    options = [{'label': str(i), 'value': i} for i in game_id]
-    return options
+        return df_games["gameId"].unique(), None
 
 
-#Callback for the slider
+@app.callback(
+    Output("showButton", "disabled"),
+    Input("week", "value"),
+    Input("game_id", "value"),
+    Input("homeTeam", "value"),
+    Input("awayTeam", "value"),
+    Input("quarter", "value")
+)
+def enable_show_button(week, game_id, home_team, away_team, quarter):
+    if week and game_id and home_team and away_team and quarter:
+        return False
+    else:
+        return True
+
+
+def on_button_click():
+    print("Button clicked")
+
+
+@app.callback(
+    Input("game_id", "value"),
+    Input("play_id", "value")
+)
+def update_values(game_id, play_id):
+    global selected_gameId, selected_playId
+    if game_id:
+        selected_gameId = game_id
+    if play_id:
+        selected_playId = play_id
+    print(selected_gameId, selected_playId)
+
+
+@app.callback(
+    # Output("showButton", "children"),
+    Input("showButton", "n_clicks")
+)
+def button_click_callback(n):
+    if n is None:
+        print("Button not clicked.")
+    else:
+        on_button_click()
+    # Callback for the slider
+
+
 @app.callback(
     Output("play_id_slider", "min"),
     Output("play_id_slider", "max"),
@@ -265,24 +339,30 @@ def update_slider(game_id):
     min_value = min(keys)
     max_value = max(keys)
     value = min(keys)
-    #marks = {key: str(play_id) for key, play_id in zip(keys, play_ids)}
+    # marks = {key: str(play_id) for key, play_id in zip(keys, play_ids)}
     return min_value, max_value, value, marks
 
 
 # Callback for the play_id
 @app.callback(
     Output("play_id", "options"),
-    Input("game_id", "value")
+    Output("play_id", "disabled"),
+    Input("game_id", "value"),
+    Input("homeTeam", "value"),
+    Input("awayTeam", "value"),
+    Input("quarter", "value")
 )
-def update_play_id_options(game_id):
-    play_id = df_plays[df_plays['gameId'] == game_id]["playId"].unique()
-    return play_id
+def update_play_id_options(game_id, home_team, away_team, quarter):
+    if game_id and home_team and away_team and quarter:
+        return sorted(
+            df_plays[(df_plays['gameId'] == game_id) & (df_plays['quarter'] == quarter)]["playId"].unique()), False
+        # return sorted(df_plays[df_plays['gameId'] == game_id]["playId"].unique()), False
 
 
-#Callback for the slider output for plot
+# Callback for the slider output for plot
 
 
-#Callback for the plot drop
+# Callback for the plot drop
 @app.callback(
     Output("football-plotly", "figure"),
     Output("football-plotly", "config"),
