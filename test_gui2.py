@@ -31,7 +31,6 @@ quarter_list = [1, 2, 3, 4]
 
 selected_gameId, selected_playId = None, None
 
-
 scoreA = int(information_data["preSnapHomeScore"].iloc[0])
 scoreB = int(information_data["preSnapVisitorScore"].iloc[0])
 pass_result = df_plays["passResult"].iloc[0]
@@ -165,24 +164,62 @@ app.layout = dbc.Container([
 ])
 
 
+# Callback for the week
+@app.callback(
+    Output("week", "options"),
+    Output("week", "value"),
+    Input("week", "value"),
+    Input("game_id", "value"),
+    Input("homeTeam", "value"),
+    Input("awayTeam", "value")
+)
+def update_game_id_options(selectedWeek, selectedGame, selectedHome, selectedAway):
+    if selectedGame:
+        week = df_games[df_games["gameId"] == selectedGame]["week"].iloc[0]
+        return [{'label': week, 'value': week} for week in random_value_list], week
+    elif selectedWeek:
+        return [{'label': week, 'value': week} for week in random_value_list], selectedWeek
+    elif selectedHome and selectedAway:
+        week = df_games[(df_games["homeTeamAbbr"] == selectedHome) & (df_games["visitorTeamAbbr"] == selectedAway)][
+            "week"].iloc[0]
+        return [{'label': week, 'value': week} for week in random_value_list], week
+
+
 # Callback for the Teams
 @app.callback(
     Output("homeTeam", "options"),
     Output("homeTeam", "value"),
-    Input("week", "value")
+    Input("game_id", "value"),
+    Input("week", "value"),
+    Input("awayTeam", "value"),
+    Input("homeTeam", "value")
 )
-def update_home_team_dropdown(week):
-    if week:
-        home_teams = df_games[df_games['week'] == week]['homeTeamAbbr'].unique()
-        print(home_teams)
-        return [{'label': team, 'value': team} for team in home_teams], None
-    # if game_Id:
-    #     print(game_Id)
-    #     home_teams = df_games[df_games['gameId'] == game_Id]['homeTeamAbbr'].unique()
-    #     return [{'label': team, 'value': team} for team in home_teams], home_teams[0]
+def update_home_team_dropdown(selectedGame, selectedWeek, selectedAway, selectedHome):
+    if selectedGame and not selectedWeek and not selectedAway:
+        home_team = df_games[df_games["gameId"] == selectedGame]["homeTeamAbbr"].iloc[0]
+        options = df_games["homeTeamAbbr"].unique()
+        return [{'label': team, 'value': team} for team in options], home_team
+    if selectedWeek:
+        week_data = df_games[df_games['week'] == selectedWeek]
+        if selectedAway:
+            home_team = week_data[week_data["visitorTeamAbbr"] == selectedAway]["homeTeamAbbr"].iloc[0]
+            options = week_data["homeTeamAbbr"].unique()
+            return [{'label': team, 'value': team} for team in options], home_team
+        else:
+            options = week_data["homeTeamAbbr"].unique()
+            if selectedHome:
+                return [{'label': team, 'value': team} for team in options], selectedHome
+            return [{'label': team, 'value': team} for team in options], None
+    elif selectedAway:
+        options = df_games[df_games["visitorTeamAbbr"] == selectedAway]["homeTeamAbbr"].unique()
+        if selectedHome:
+            return [{'label': team, 'value': team} for team in options], selectedHome
+        return [{'label': team, 'value': team} for team in options], None
     else:
-        # If no week is selected, disable the home team dropdown and clear its options
-        return df_games["homeTeamAbbr"].unique(), None
+        options = df_games["homeTeamAbbr"].unique()
+        if selectedHome:
+            return [{'label': team, 'value': team} for team in options], selectedHome
+        return [{'label': team, 'value': team} for team in options], None
 
 
 # @app.callback(
@@ -212,24 +249,31 @@ def update_home_team_dropdown(week):
     Output("awayTeam", "options"),
     Output("awayTeam", "value"),
     Input("homeTeam", "value"),
-    Input("week", "value")
+    Input("week", "value"),
+    Input("awayTeam", "value")
 )
-def update_away_team_value(selectedHomeTeam, selectedWeek):
+def update_away_team_value(selectedHomeTeam, selectedWeek, selectedAway):
     if selectedWeek:
         week_data = df_games[df_games['week'] == selectedWeek]
         if selectedHomeTeam:
             away_team = week_data[week_data["homeTeamAbbr"] == selectedHomeTeam]["visitorTeamAbbr"].iloc[0]
-            return [{'label': away_team, 'value': away_team}], away_team
+            options = week_data["visitorTeamAbbr"].unique()
+            return [{'label': team, 'value': team} for team in options], away_team
         else:
-            away_teams = week_data["visitorTeamAbbr"].unique()
-            return [{'label': team, 'value': team} for team in away_teams], None
+            options = week_data["visitorTeamAbbr"].unique()
+            if selectedAway:
+                return [{'label': team, 'value': team} for team in options], selectedAway
+            return [{'label': team, 'value': team} for team in options], None
     elif selectedHomeTeam:
-        away_teams = df_games[df_games["homeTeamAbbr"] == selectedHomeTeam]["visitorTeamAbbr"]
-        # return [{'label': away_teams, 'value': away_teams}], away_teams
-        return [{'label': team, 'value': team} for team in away_teams], None
+        options = df_games[df_games["homeTeamAbbr"] == selectedHomeTeam]["visitorTeamAbbr"]
+        if selectedAway:
+            return [{'label': team, 'value': team} for team in options], selectedAway
+        return [{'label': team, 'value': team} for team in options], None
     else:
-        away_teams = df_games["visitorTeamAbbr"].unique()
-        return [{'label': team, 'value': team} for team in away_teams], None
+        options = df_games["visitorTeamAbbr"].unique()
+        if selectedAway:
+            return [{'label': team, 'value': team} for team in options], selectedAway
+        return [{'label': team, 'value': team} for team in options], None
 
 
 # # Callback for the game_id
@@ -286,14 +330,20 @@ def update_game_id_options(home_team, away_team, week):
     Input("quarter", "value")
 )
 def enable_show_button(week, game_id, home_team, away_team, quarter):
-    if week and game_id and home_team and away_team and quarter:
-        return False
-    else:
-        return True
+    return not week or not game_id or not home_team or not away_team or not quarter
+    # if week and game_id and home_team and away_team and quarter:
+    #     return False
+    # else:
+    #     return True
 
 
 def on_button_click():
     print("Button clicked")
+
+
+def update_plot(game_id, play_id):
+    fig = animate_play(game_id, play_id, df_plays, df_weeks)
+    return fig, {'displayModeBar': False}
 
 
 @app.callback(
@@ -310,14 +360,21 @@ def update_values(game_id, play_id):
 
 
 @app.callback(
-    # Output("showButton", "children"),
-    Input("showButton", "n_clicks")
+    Output("football-plotly", "figure"),
+    Output("football-plotly", "config"),
+    Input("showButton", "n_clicks"),
+    Input("game_id", "value"),
+    Input("play_id", "value")
 )
-def button_click_callback(n):
+def button_click_callback(n, game_id, play_id):
     if n is None:
         print("Button not clicked.")
     else:
         on_button_click()
+        fig = animate_play(game_id, play_id, df_plays, df_weeks)
+        print(fig)
+        return fig, {'displayModeBar': False}
+        # return update_plot(game_id, play_id)
     # Callback for the slider
 
 
@@ -363,15 +420,15 @@ def update_play_id_options(game_id, home_team, away_team, quarter):
 
 
 # Callback for the plot drop
-@app.callback(
-    Output("football-plotly", "figure"),
-    Output("football-plotly", "config"),
-    Input("game_id", "value"),
-    Input("play_id", "value")
-)
-def update_plot(game_id, play_id):
-    fig = animate_play(game_id, play_id, df_plays, df_weeks)
-    return fig, {'displayModeBar': False}
+# @app.callback(
+#     Output("football-plotly", "figure"),
+#     Output("football-plotly", "config"),
+#     Input("game_id", "value"),
+#     Input("play_id", "value")
+# )
+# def update_plot(game_id, play_id):
+#     fig = animate_play(game_id, play_id, df_plays, df_weeks)
+#     return fig, {'displayModeBar': False}
 
 
 # # Create interactivity between dropdown component and graph
