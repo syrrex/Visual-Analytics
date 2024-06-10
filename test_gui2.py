@@ -1,6 +1,7 @@
 from dash import Dash, html, dcc, Input, Output  # pip install dash
 import dash_ag_grid as dag  # pip install dash-ag-grid
 import dash_bootstrap_components as dbc  # pip install dash-bootstrap-components
+import dash
 
 import matplotlib  # pip install matplotlib
 
@@ -28,6 +29,7 @@ home_teams = df_games["homeTeamAbbr"].unique()
 gameId_drop = df_games["gameId"]
 playid_drop = df_plays["playId"]
 quarter_list = [1, 2, 3, 4]
+buttonClicked = 0
 
 selected_gameId, selected_playId = None, None
 
@@ -116,6 +118,7 @@ app.layout = dbc.Container([
                 id='quarter',
                 placeholder='Quarter',
                 clearable=False,
+                disabled=True,
                 options=quarter_list),
 
             dcc.Dropdown(
@@ -127,6 +130,7 @@ app.layout = dbc.Container([
             dbc.Card(
                 dbc.CardBody("This is some text within a card body"),
                 className="mb-3",
+                id="cardInfo"
             ),
             dbc.Button("Show", id="showButton", disabled=True,
                        color="primary", className="mr-1", n_clicks=0),
@@ -156,6 +160,7 @@ app.layout = dbc.Container([
                     f"Offense Formation: {Formation}, PlayType: {PlayType}, YardsGained: {YardsGained}"
                     f"Pass Result: {pass_result}"),
                 className="mb-3",
+                id="additionalInfo"
             ),
         ], width=12, md=6),
 
@@ -174,15 +179,23 @@ app.layout = dbc.Container([
     Input("awayTeam", "value")
 )
 def update_game_id_options(selectedWeek, selectedGame, selectedHome, selectedAway):
-    if selectedGame:
+    ctx = dash.callback_context
+    if not ctx.triggered:
+        trigger = 'None'
+    else:
+        trigger = ctx.triggered[0]['prop_id'].split('.')[0]
+    print("Here Week")
+    print(trigger)
+    if trigger == "week":
+        return [{'label': week, 'value': week} for week in random_value_list], selectedWeek
+    if trigger == "game_id":
         week = df_games[df_games["gameId"] == selectedGame]["week"].iloc[0]
         return [{'label': week, 'value': week} for week in random_value_list], week
-    elif selectedWeek:
-        return [{'label': week, 'value': week} for week in random_value_list], selectedWeek
-    elif selectedHome and selectedAway:
-        week = df_games[(df_games["homeTeamAbbr"] == selectedHome) & (df_games["visitorTeamAbbr"] == selectedAway)][
-            "week"].iloc[0]
-        return [{'label': week, 'value': week} for week in random_value_list], week
+    if trigger == "homeTeam" or trigger == "awayTeam":
+        if selectedHome and selectedAway:
+            week = df_games[(df_games["homeTeamAbbr"] == selectedHome) & (df_games["visitorTeamAbbr"] == selectedAway)][
+                "week"].iloc[0]
+            return [{'label': week, 'value': week} for week in random_value_list], week
 
 
 # Callback for the Teams
@@ -195,85 +208,109 @@ def update_game_id_options(selectedWeek, selectedGame, selectedHome, selectedAwa
     Input("homeTeam", "value")
 )
 def update_home_team_dropdown(selectedGame, selectedWeek, selectedAway, selectedHome):
-    if selectedGame and not selectedWeek and not selectedAway:
+    ctx = dash.callback_context
+    if not ctx.triggered:
+        trigger = 'None'
+    else:
+        trigger = ctx.triggered[0]['prop_id'].split('.')[0]
+    print("Here Home")
+    print("Trigger: ", trigger)
+    if trigger == "week":
+        week_data = df_games[df_games['week'] == selectedWeek]
+        options = week_data["homeTeamAbbr"].unique()
+        return [{'label': team, 'value': team} for team in options], None
+    if trigger == "game_id":
         home_team = df_games[df_games["gameId"] == selectedGame]["homeTeamAbbr"].iloc[0]
         options = df_games["homeTeamAbbr"].unique()
         return [{'label': team, 'value': team} for team in options], home_team
-    if selectedWeek:
-        week_data = df_games[df_games['week'] == selectedWeek]
-        if selectedAway:
-            home_team = week_data[week_data["visitorTeamAbbr"] == selectedAway]["homeTeamAbbr"].iloc[0]
-            options = week_data["homeTeamAbbr"].unique()
-            return [{'label': team, 'value': team} for team in options], home_team
-        else:
-            options = week_data["homeTeamAbbr"].unique()
-            if selectedHome:
-                return [{'label': team, 'value': team} for team in options], selectedHome
-            return [{'label': team, 'value': team} for team in options], None
-    elif selectedAway:
-        options = df_games[df_games["visitorTeamAbbr"] == selectedAway]["homeTeamAbbr"].unique()
-        if selectedHome:
-            return [{'label': team, 'value': team} for team in options], selectedHome
-        return [{'label': team, 'value': team} for team in options], None
-    else:
+    if trigger == "awayTeam":
+        home_team = df_games[df_games["visitorTeamAbbr"] == selectedAway]["homeTeamAbbr"].iloc[0]
         options = df_games["homeTeamAbbr"].unique()
-        if selectedHome:
-            return [{'label': team, 'value': team} for team in options], selectedHome
-        return [{'label': team, 'value': team} for team in options], None
+        return [{'label': team, 'value': team} for team in options], home_team
+    if trigger == "homeTeam":
+        options = df_games["homeTeamAbbr"].unique()
+        return [{'label': team, 'value': team} for team in options], selectedHome
 
-
-# @app.callback(
-#     Output("homeTeam", "options"),
-#     Output("homeTeam", "disabled"),
-#     Output("homeTeam", "value"),
-#     Input("week", "value"),
-#     Input("awayTeam", "value")
-# )
-# def update_home_team_dropdown(week, away_team):
-#     if week:
-#         week_data = df_games[df_games['week'] == week]
-#         if away_team:
-#             home_Team = week_data[week_data["visitorTeamAbbr"] == away_team]["homeTeamAbbr"].iloc[0]
-#             return [{'label': home_Team, 'value': home_Team}], False, home_Team
-#         else:
-#             home_teams = week_data["homeTeamAbbr"].unique()
-#             return [{'label': team, 'value': team} for team in home_teams], False, None
-#     elif away_team:
-#         home_Team = df_games[df_games["visitorTeamAbbr"] == away_team]["homeTeamAbbr"].iloc[0]
-#         return [{'label': home_Team, 'value': home_Team}], False, home_Team
-#     else:
-#         home_teams = df_games["homeTeamAbbr"].unique()
-#         return [{'label': team, 'value': team} for team in home_teams], False, None
+    # if selectedGame and not selectedWeek and not selectedAway:
+    #     home_team = df_games[df_games["gameId"] == selectedGame]["homeTeamAbbr"].iloc[0]
+    #     options = df_games["homeTeamAbbr"].unique()
+    #     return [{'label': team, 'value': team} for team in options], home_team
+    # if selectedWeek:
+    #     week_data = df_games[df_games['week'] == selectedWeek]
+    #     if selectedAway:
+    #         home_team = week_data[week_data["visitorTeamAbbr"] == selectedAway]["homeTeamAbbr"].iloc[0]
+    #         options = week_data["homeTeamAbbr"].unique()
+    #         return [{'label': team, 'value': team} for team in options], home_team
+    #     else:
+    #         options = week_data["homeTeamAbbr"].unique()
+    #         if selectedHome:
+    #             return [{'label': team, 'value': team} for team in options], selectedHome
+    #         return [{'label': team, 'value': team} for team in options], None
+    # elif selectedAway:
+    #     options = df_games[df_games["visitorTeamAbbr"] == selectedAway]["homeTeamAbbr"].unique()
+    #     if selectedHome:
+    #         return [{'label': team, 'value': team} for team in options], selectedHome
+    #     return [{'label': team, 'value': team} for team in options], None
+    # else:
+    #     options = df_games["homeTeamAbbr"].unique()
+    #     if selectedHome:
+    #         return [{'label': team, 'value': team} for team in options], selectedHome
+    #     return [{'label': team, 'value': team} for team in options], None
 
 @app.callback(
     Output("awayTeam", "options"),
     Output("awayTeam", "value"),
     Input("homeTeam", "value"),
     Input("week", "value"),
-    Input("awayTeam", "value")
+    Input("awayTeam", "value"),
+    Input("game_id", "value")
 )
-def update_away_team_value(selectedHomeTeam, selectedWeek, selectedAway):
-    if selectedWeek:
-        week_data = df_games[df_games['week'] == selectedWeek]
-        if selectedHomeTeam:
-            away_team = week_data[week_data["homeTeamAbbr"] == selectedHomeTeam]["visitorTeamAbbr"].iloc[0]
-            options = week_data["visitorTeamAbbr"].unique()
-            return [{'label': team, 'value': team} for team in options], away_team
-        else:
-            options = week_data["visitorTeamAbbr"].unique()
-            if selectedAway:
-                return [{'label': team, 'value': team} for team in options], selectedAway
-            return [{'label': team, 'value': team} for team in options], None
-    elif selectedHomeTeam:
-        options = df_games[df_games["homeTeamAbbr"] == selectedHomeTeam]["visitorTeamAbbr"]
-        if selectedAway:
-            return [{'label': team, 'value': team} for team in options], selectedAway
-        return [{'label': team, 'value': team} for team in options], None
+def update_away_team_value(selectedHomeTeam, selectedWeek, selectedAway, selectedGame):
+    ctx = dash.callback_context
+    if not ctx.triggered:
+        trigger = 'None'
     else:
+        trigger = ctx.triggered[0]['prop_id'].split('.')[0]
+    print("Here Away")
+    print("Trigger: ", trigger)
+    if trigger == "homeTeam":
+        away_team = df_games[df_games["homeTeamAbbr"] == selectedHomeTeam]["visitorTeamAbbr"].iloc[0]
         options = df_games["visitorTeamAbbr"].unique()
-        if selectedAway:
-            return [{'label': team, 'value': team} for team in options], selectedAway
+        return [{'label': team, 'value': team} for team in options], away_team
+    if trigger == "week":
+        week_data = df_games[df_games['week'] == selectedWeek]
+        options = week_data["visitorTeamAbbr"].unique()
         return [{'label': team, 'value': team} for team in options], None
+    if trigger == "awayTeam":
+        options = df_games["visitorTeamAbbr"].unique()
+        return [{'label': team, 'value': team} for team in options], selectedAway
+    if trigger == "game_id":
+        away_team = df_games[df_games["gameId"] == selectedGame]["visitorTeamAbbr"].iloc[0]
+        options = df_games["visitorTeamAbbr"].unique()
+        return [{'label': team, 'value': team} for team in options], away_team
+
+    #
+    # if selectedWeek:
+    #     week_data = df_games[df_games['week'] == selectedWeek]
+    #     if selectedHomeTeam:
+    #         away_team = week_data[week_data["homeTeamAbbr"] == selectedHomeTeam]["visitorTeamAbbr"].iloc[0]
+    #         options = week_data["visitorTeamAbbr"].unique()
+    #         return [{'label': team, 'value': team} for team in options], away_team
+    #     else:
+    #         options = week_data["visitorTeamAbbr"].unique()
+    #         if selectedAway:
+    #             return [{'label': team, 'value': team} for team in options], selectedAway
+    #         return [{'label': team, 'value': team} for team in options], None
+    # elif selectedHomeTeam:
+    #     options = df_games[df_games["homeTeamAbbr"] == selectedHomeTeam]["visitorTeamAbbr"]
+    #     if selectedAway:
+    #         return [{'label': team, 'value': team} for team in options], selectedAway
+    #     return [{'label': team, 'value': team} for team in options], None
+    # else:
+    #     options = df_games["visitorTeamAbbr"].unique()
+    #     if selectedAway:
+    #         return [{'label': team, 'value': team} for team in options], selectedAway
+    #     return [{'label': team, 'value': team} for team in options], None
 
 
 # # Callback for the game_id
@@ -301,24 +338,46 @@ def update_away_team_value(selectedHomeTeam, selectedWeek, selectedAway):
     Output("game_id", "value"),
     Input("homeTeam", "value"),
     Input("awayTeam", "value"),
-    Input("week", "value")
+    Input("week", "value"),
+    Input("game_id", "value")
 )
-def update_game_id_options(home_team, away_team, week):
-    if home_team and away_team and week:
-        game_id = df_games[(df_games['homeTeamAbbr'] == home_team) & (df_games['visitorTeamAbbr'] == away_team) & (
-                df_games['week'] == week)]["gameId"].unique()
-        if len(game_id) > 0:
-            return [{'label': id, 'value': id} for id in game_id], game_id[0]
-        else:
-            return [], None
-    elif week:
-        game_ids = df_games[df_games['week'] == week]["gameId"].unique()
-        return [{'label': id, 'value': id} for id in game_ids], None
-    elif home_team:
-        game_ids = df_games[df_games["homeTeamAbbr"] == home_team]["gameId"].unique()
-        return [{'label': id, 'value': id} for id in game_ids], None
+def update_game_id_options(selectedHome, selectedAway, selectedWeek, selectedGame):
+    ctx = dash.callback_context
+    if not ctx.triggered:
+        trigger = 'None'
     else:
-        return df_games["gameId"].unique(), None
+        trigger = ctx.triggered[0]['prop_id'].split('.')[0]
+    print("Here Game")
+    print("Trigger: ", trigger)
+    if trigger == "homeTeam" or trigger == "awayTeam":
+        if selectedHome and selectedAway:
+            game_id = df_games[(df_games['homeTeamAbbr'] == selectedHome) & (df_games['visitorTeamAbbr'] == selectedAway)][
+                "gameId"].unique()
+            options = df_games["gameId"].unique()
+            return [{'label': id, 'value': id} for id in options], game_id[0]
+    if trigger == "week":
+        game_ids = df_games[df_games['week'] == selectedWeek]["gameId"].unique()
+        return [{'label': id, 'value': id} for id in game_ids], None
+    if trigger == "game_id":
+        options = df_games["gameId"].unique()
+        return [{'label': id, 'value': id} for id in options], selectedGame
+
+
+    # if home_team and away_team and week:
+    #     game_id = df_games[(df_games['homeTeamAbbr'] == home_team) & (df_games['visitorTeamAbbr'] == away_team) & (
+    #             df_games['week'] == week)]["gameId"].unique()
+    #     if len(game_id) > 0:
+    #         return [{'label': id, 'value': id} for id in game_id], game_id[0]
+    #     else:
+    #         return [], None
+    # elif week:
+    #     game_ids = df_games[df_games['week'] == week]["gameId"].unique()
+    #     return [{'label': id, 'value': id} for id in game_ids], None
+    # elif home_team:
+    #     game_ids = df_games[df_games["homeTeamAbbr"] == home_team]["gameId"].unique()
+    #     return [{'label': id, 'value': id} for id in game_ids], None
+    # else:
+    #     return df_games["gameId"].unique(), None
 
 
 @app.callback(
@@ -367,13 +426,17 @@ def update_values(game_id, play_id):
     Input("play_id", "value")
 )
 def button_click_callback(n, game_id, play_id):
+    global buttonClicked
     if n is None:
         print("Button not clicked.")
     else:
-        on_button_click()
-        fig = animate_play(game_id, play_id, df_plays, df_weeks)
-        print(fig)
-        return fig, {'displayModeBar': False}
+        print(f"Button clicked.{n}")
+        if n > buttonClicked:
+            buttonClicked = n
+
+            on_button_click()
+            fig = animate_play(game_id, play_id, df_plays, df_weeks)
+            return fig, {'displayModeBar': False}
         # return update_plot(game_id, play_id)
     # Callback for the slider
 
@@ -399,6 +462,19 @@ def update_slider(game_id):
     # marks = {key: str(play_id) for key, play_id in zip(keys, play_ids)}
     return min_value, max_value, value, marks
 
+@app.callback(
+    Output("quarter", "options"),
+    Output("quarter", "value"),
+    Output("quarter", "disabled"),
+    Input("game_id", "value"),
+    Input("quarter", "value")
+)
+def update_quarter_options(selectedGame, selectedQuarter):
+    if selectedGame:
+        return quarter_list, selectedQuarter, False
+    else:
+        return [], None, True
+
 
 # Callback for the play_id
 @app.callback(
@@ -413,8 +489,28 @@ def update_play_id_options(game_id, home_team, away_team, quarter):
     if game_id and home_team and away_team and quarter:
         return sorted(
             df_plays[(df_plays['gameId'] == game_id) & (df_plays['quarter'] == quarter)]["playId"].unique()), False
-        # return sorted(df_plays[df_plays['gameId'] == game_id]["playId"].unique()), False
+    else:
+        return [], True
 
+@app.callback(
+    Output("cardInfo", "children"),
+    Input("game_id", "value"),
+    Input("play_id", "value")
+)
+def update_card_info(game_id, play_id):
+    if game_id and play_id:
+        information_data = df_plays[(df_plays['gameId'] == game_id) & (df_plays['playId'] == play_id)]
+        print(information_data.columns)
+        yardsToGo = information_data["yardsToGo"].iloc[0]
+        down = information_data["down"].iloc[0]
+        # playType = information_data["playType"].iloc[0]
+        print("Here Card")
+        print(yardsToGo, down)
+
+        # scoreA = int(information_data["preSnapHomeScore"].iloc[0])
+        # scoreB = int(information_data["preSnapVisitorScore"].iloc[0])
+
+    return dbc.CardBody(f"This is the updated text: ")
 
 # Callback for the slider output for plot
 
