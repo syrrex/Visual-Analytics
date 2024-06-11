@@ -13,7 +13,7 @@ def load_plays_data():
     file_path = 'data/plays.csv'
     df_plays = pd.read_csv(file_path)
     df_plays = df_plays.drop(columns=['yardlineSide', 'defendersInTheBox', 'isDefensivePI', 'epa', 'numberOfPassRushers',
-                                      'playType', 'typeDropback', 'penaltyCodes', 'penaltyJerseyNumbers', 'offensePlayResult'])
+                                      'typeDropback', 'penaltyCodes', 'penaltyJerseyNumbers', 'offensePlayResult'])
     return df_plays
 
 

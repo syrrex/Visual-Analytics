@@ -498,19 +498,17 @@ def update_play_id_options(game_id, home_team, away_team, quarter):
     Input("play_id", "value")
 )
 def update_card_info(game_id, play_id):
+    text = "No information available."
     if game_id and play_id:
         information_data = df_plays[(df_plays['gameId'] == game_id) & (df_plays['playId'] == play_id)]
         print(information_data.columns)
         yardsToGo = information_data["yardsToGo"].iloc[0]
         down = information_data["down"].iloc[0]
-        # playType = information_data["playType"].iloc[0]
-        print("Here Card")
-        print(yardsToGo, down)
+        playType = information_data["playType"].iloc[0].split("_")[2]
+        playDescription = information_data["playDescription"].iloc[0]
+        text = f"Down: {down}, Yards to go: {yardsToGo}, Play Type: {playType}, Play Description: {playDescription}"
 
-        # scoreA = int(information_data["preSnapHomeScore"].iloc[0])
-        # scoreB = int(information_data["preSnapVisitorScore"].iloc[0])
-
-    return dbc.CardBody(f"This is the updated text: ")
+    return dbc.CardBody(text)
 
 # Callback for the slider output for plot
 
