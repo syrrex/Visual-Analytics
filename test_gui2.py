@@ -30,6 +30,7 @@ gameId_drop = df_games["gameId"]
 playid_drop = df_plays["playId"]
 quarter_list = [1, 2, 3, 4]
 buttonClicked = 0
+downslist = df_plays["down"].unique()
 
 selected_gameId, selected_playId = None, None
 
@@ -43,7 +44,8 @@ Result = 0
 Formation = "test"
 PlayType = 0
 YardsGained = 0
-
+teamA = df_games["homeTeamAbbr"].iloc[0]
+teamB = df_games["visitorTeamAbbr"].iloc[0]
 # input for the plot
 
 
@@ -67,7 +69,15 @@ marks = {key: str(play_id) for key, play_id in zip(keys, play_ids)}
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 from gamefield_plotly import animate_play
 
+from additionalplots import calculate_acceleration
+from additionalplots import speed_acc_plot_interactive
+from additionalplots import distance_heatmap
+
 fig = animate_play(gameId, playid, df_plays, df_weeks)
+
+speed_fig = speed_acc_plot_interactive(df_weeks, gameId, playid)
+distance_fig = distance_heatmap(df_weeks, gameId, playid)
+
 
 app.layout = dbc.Container([
     html.H1("American Football Analysis Application", className='mb-2', style={'textAlign': 'center'}),
@@ -75,8 +85,8 @@ app.layout = dbc.Container([
     dbc.Row([
         dbc.Row([
             dbc.Col([
-                html.P("Team A : Team B"),
-                html.P(f"{scoreA} : {scoreB}")
+                html.P(f"{teamA} : {teamB}", id= "teams"),
+                html.P(f"{scoreA} : {scoreB}", id= "score")
             ], width=12),
         ]),
     ]),
@@ -98,21 +108,21 @@ app.layout = dbc.Container([
                 clearable=False,
                 options=away_teams),
             dcc.Dropdown(
-                id='down',
-                placeholder='Down:',
-                clearable=False,
-                options=random_value_list),
-            dcc.Dropdown(
-                id='playType',
-                placeholder='Play type',
-                clearable=False,
-                options=random_value_list),
-
-            dcc.Dropdown(
                 id='game_id',
                 placeholder='game',
                 clearable=False,
-                options=gameId_drop),
+                options=gameId_drop, disabled=True),
+            dcc.Dropdown(
+                id='down',
+                placeholder='Down:',
+                clearable=False,
+                options=downslist),
+
+            #dcc.Dropdown(
+                #id='playType',
+                #placeholder='Play type',
+                #clearable=False,
+                #options=random_value_list),
 
             dcc.Dropdown(
                 id='quarter',
@@ -143,16 +153,7 @@ app.layout = dbc.Container([
             #            id="slider"),
             # html.Div(id="slider-output-container"),
 
-            dcc.Slider(
-                id='play_id_slider',
-                min=min(keys),
-                max=max(keys),
-                value=min(keys),
-                marks={min(keys): str(min(keys)), int(max(keys) / 2): str(int(max(keys) / 2)),
-                       max(keys): str(max(keys))},
-                tooltip={"placement": "bottom", "template": "Play {value}", "always_visible": True},
-                step=1,
-            ),
+            
             html.Div(style={'height': '20px'}),  # Add this line before your dbc.Card
             dbc.Card(
                 dbc.CardBody(
@@ -163,10 +164,14 @@ app.layout = dbc.Container([
                 id="additionalInfo"
             ),
         ], width=12, md=6),
+        dbc.Col([
+            dcc.Graph(id='speed-plot', figure=speed_fig, config={'displayModeBar': False}),
 
-    ]),
+            dcc.Graph(id='distance-heatmap', figure=distance_fig, config={'displayModeBar': False}),
 
-])
+    ], width=10),
+
+]) ])
 
 
 # Callback for the week
@@ -224,11 +229,14 @@ def update_home_team_dropdown(selectedGame, selectedWeek, selectedAway, selected
         options = df_games["homeTeamAbbr"].unique()
         return [{'label': team, 'value': team} for team in options], home_team
     if trigger == "awayTeam":
-        home_team = df_games[df_games["visitorTeamAbbr"] == selectedAway]["homeTeamAbbr"].iloc[0]
-        options = df_games["homeTeamAbbr"].unique()
-        return [{'label': team, 'value': team} for team in options], home_team
+        if selectedWeek:
+            home_team = df_games[(df_games["visitorTeamAbbr"] == selectedAway) & (df_games["week"] == selectedWeek)][
+                "homeTeamAbbr"].iloc[0]
+            options = df_games["homeTeamAbbr"].unique()
+            return [{'label': team, 'value': team} for team in options], home_team
     if trigger == "homeTeam":
-        options = df_games["homeTeamAbbr"].unique()
+        week_data = df_games[df_games['week'] == selectedWeek]
+        options = week_data["homeTeamAbbr"].unique()
         return [{'label': team, 'value': team} for team in options], selectedHome
 
     # if selectedGame and not selectedWeek and not selectedAway:
@@ -274,9 +282,12 @@ def update_away_team_value(selectedHomeTeam, selectedWeek, selectedAway, selecte
     print("Here Away")
     print("Trigger: ", trigger)
     if trigger == "homeTeam":
-        away_team = df_games[df_games["homeTeamAbbr"] == selectedHomeTeam]["visitorTeamAbbr"].iloc[0]
-        options = df_games["visitorTeamAbbr"].unique()
-        return [{'label': team, 'value': team} for team in options], away_team
+        if selectedWeek:
+            away_team = df_games[(df_games["homeTeamAbbr"] == selectedHomeTeam) & (df_games["week"] == selectedWeek)][
+                "visitorTeamAbbr"].iloc[0]
+            options = df_games["visitorTeamAbbr"].unique()
+            return [{'label': team, 'value': team} for team in options], away_team
+        
     if trigger == "week":
         week_data = df_games[df_games['week'] == selectedWeek]
         options = week_data["visitorTeamAbbr"].unique()
@@ -418,27 +429,6 @@ def update_values(game_id, play_id):
     print(selected_gameId, selected_playId)
 
 
-@app.callback(
-    Output("football-plotly", "figure"),
-    Output("football-plotly", "config"),
-    Input("showButton", "n_clicks"),
-    Input("game_id", "value"),
-    Input("play_id", "value")
-)
-def button_click_callback(n, game_id, play_id):
-    global buttonClicked
-    if n is None:
-        print("Button not clicked.")
-    else:
-        print(f"Button clicked.{n}")
-        if n > buttonClicked:
-            buttonClicked = n
-
-            on_button_click()
-            fig = animate_play(game_id, play_id, df_plays, df_weeks)
-            return fig, {'displayModeBar': False}
-        # return update_plot(game_id, play_id)
-    # Callback for the slider
 
 
 @app.callback(
@@ -509,6 +499,61 @@ def update_card_info(game_id, play_id):
         text = f"Down: {down}, Yards to go: {yardsToGo}, Play Type: {playType}, Play Description: {playDescription}"
 
     return dbc.CardBody(text)
+
+@app.callback(
+    Output("additionalInfo", "children"),
+    Input("game_id", "value"),
+    Input("play_id", "value")
+)
+def update_card_adinfo(game_id, play_id):
+    text = "No information available."
+    if game_id and play_id:
+        information_data = df_plays[(df_plays['gameId'] == game_id) & (df_plays['playId'] == play_id)]
+        print(information_data.columns)
+        yardlinen = information_data["yardlineNumber"].iloc[0]
+        yardsToGo = information_data["yardsToGo"].iloc[0]
+        playResult = information_data["playResult"].iloc[0]
+        Formation = information_data["offenseFormation"].iloc[0]
+        PlayType = information_data["playType"].iloc[0]
+        pass_result = information_data["passResult"].iloc[0]
+        text = f"Distance first down: {yardsToGo}, YardLine: {yardlinen}, Net yards gained: {playResult}, Offense Formation: {Formation}, PlayType: {PlayType}, Pass Result: {pass_result}"
+
+    return dbc.CardBody(text)
+
+@app.callback(
+    Output("football-plotly", "figure"),
+    Output("football-plotly", "config"),
+    Output("speed-plot", "figure"),
+    Output("distance-heatmap", "figure"),
+    Output("score", "children"),
+    Output("teams", "children"),
+    Input("showButton", "n_clicks"),
+    Input("game_id", "value"),
+    Input("play_id", "value"),
+    Input("homeTeam", "value"),
+    Input("awayTeam", "value")
+)
+def button_click_callback(n, game_id, play_id, homeTeam, awayTeam):
+    global buttonClicked
+    if n is None:
+        print("Button not clicked.")
+    else:
+        print(f"Button clicked.{n}")
+        if n > buttonClicked:
+            buttonClicked = n
+
+            on_button_click()
+            fig = animate_play(game_id, play_id, df_plays, df_weeks)
+            speed_fig = speed_acc_plot_interactive(df_weeks, game_id, play_id)
+            distance_fig = distance_heatmap(df_weeks, game_id, play_id)
+            home_score = int(df_plays[(df_plays['gameId'] == game_id) & (df_plays['playId'] == play_id)]["preSnapHomeScore"].iloc[0])
+            away_score = int(df_plays[(df_plays['gameId'] == game_id) & (df_plays['playId'] == play_id)]["preSnapVisitorScore"].iloc[0])
+            hometeam = homeTeam
+            awayteam = awayTeam
+            return fig, {'displayModeBar': False}, speed_fig, distance_fig, f"{home_score} : {away_score}", f"{hometeam} : {awayteam}"
+        # return update_plot(game_id, play_id)
+    # Callback for the slider
+
 
 # Callback for the slider output for plot
 
