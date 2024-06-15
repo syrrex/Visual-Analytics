@@ -5,7 +5,7 @@ from pathlib import Path
 def load_week_data(week):
     file_path = f'data/week{week}.csv'
     df_week = pd.read_csv(file_path)
-    df_week = df_week.drop(columns=['s', 'a', 'dis', 'o', 'nflId', 'dir', 'event', 'route'])
+    df_week = df_week.drop(columns=[ 'dis', 'o', 'nflId', 'dir', 'event', 'route'])
     return df_week
 
 
