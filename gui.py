@@ -23,12 +23,10 @@ playid = 75
 
 information_data = df_plays[(df_plays['gameId'] == gameId) & (df_plays['playId'] == playid)]
 
-random_value_list = df_games["week"].unique()
 away_teams = df_games["visitorTeamAbbr"].unique()
 home_teams = df_games["homeTeamAbbr"].unique()
 gameId_drop = df_games["gameId"]
 playid_drop = df_plays["playId"]
-quarter_list = [1, 2, 3, 4]
 buttonClicked = 0
 downslist = df_plays["down"].unique()
 
@@ -78,8 +76,7 @@ app.layout = dbc.Container([
             dcc.Dropdown(
                 id='week',
                 placeholder='Week',
-                clearable=False,
-                options=random_value_list),
+                clearable=False),
             dcc.Dropdown(
                 id='homeTeam',
                 placeholder='Home team',
@@ -93,31 +90,27 @@ app.layout = dbc.Container([
             dcc.Dropdown(
                 id='gameSelector',
                 placeholder='Select Game',
-                clearable=False,
-                options=random_value_list),
+                clearable=False),
             dcc.Dropdown(
                 id='game_id',
                 placeholder='Select GameID',
                 clearable=False,
                 options=gameId_drop),
             dcc.Dropdown(
-                id='down',
-                placeholder='Down',
-                clearable=False,
-                options=random_value_list),
-            dcc.Dropdown(
                 id='quarter',
                 placeholder='Quarter',
                 clearable=False,
-                disabled=True,
-                options=quarter_list),
-
+                disabled=True),
+            dcc.Dropdown(
+                id='down',
+                placeholder='Down',
+                clearable=False,
+                disabled=True),
             dcc.Dropdown(
                 id='play_id',
                 placeholder='play',
                 clearable=False,
                 disabled=True),
-
             dbc.Card(
                 dbc.CardBody("This is some text within a card body"),
                 className="mb-3",
@@ -257,7 +250,6 @@ def update_gameSelector(selectedWeek, selectedHome, selectedAway, selectedGame, 
     if selectedAway:
         filtered_games = filtered_games[filtered_games['visitorTeamAbbr'] == selectedAway]
 
-    print(filtered_games)
     gameOptions = [{'label': f"{row['homeTeamAbbr']} vs {row['visitorTeamAbbr']}", 'value': row['gameId']} for
                    index, row in filtered_games.iterrows()]
     return gameOptions, None
@@ -288,7 +280,6 @@ def update_game_id_options(selectedHome, selectedAway, selectedWeek, selectedGam
     if selectedAway:
         filtered_games = filtered_games[filtered_games['visitorTeamAbbr'] == selectedAway]
 
-    print(filtered_games)
     options = filtered_games["gameId"].unique()
     return options, None
 
@@ -354,9 +345,24 @@ def update_slider(game_id):
 )
 def update_quarter_options(selectedGame, selectedQuarter):
     if selectedGame:
+        quarter_list = sorted(df_plays[df_plays['gameId'] == selectedGame]["quarter"].unique())
         return quarter_list, selectedQuarter, False
     else:
         return [], None, True
+
+
+@app.callback(
+    Output("down", "options"),
+    Output("down", "disabled"),
+    Input("game_id", "value"),
+    Input("quarter", "value")
+)
+def update_down_options(selectedGame, selectedQuarter):
+    if selectedGame and selectedQuarter:
+        return sorted(df_plays[(df_plays['gameId'] == selectedGame) & (df_plays['quarter'] == selectedQuarter)][
+                          "down"].unique()), False
+    else:
+        return [], True
 
 
 # Callback for the play_id
@@ -366,12 +372,14 @@ def update_quarter_options(selectedGame, selectedQuarter):
     Input("game_id", "value"),
     Input("homeTeam", "value"),
     Input("awayTeam", "value"),
-    Input("quarter", "value")
+    Input("quarter", "value"),
+    Input("down", "value")
 )
-def update_play_id_options(game_id, home_team, away_team, quarter):
-    if game_id and home_team and away_team and quarter:
+def update_play_id_options(game_id, home_team, away_team, quarter, down):
+    if game_id and home_team and away_team and quarter and down:
         return sorted(
-            df_plays[(df_plays['gameId'] == game_id) & (df_plays['quarter'] == quarter)]["playId"].unique()), False
+            df_plays[(df_plays['gameId'] == game_id) & (df_plays['quarter'] == quarter) & (df_plays['down'] == down)]
+            ["playId"].unique()), False
     else:
         return [], True
 
