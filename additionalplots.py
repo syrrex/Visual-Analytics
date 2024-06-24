@@ -1,40 +1,6 @@
-import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
-import plotly.figure_factory as ff
 from plotly.subplots import make_subplots
-
-def calculate_acceleration(df, gameId, playId, displayName):
-    """
-    Calculates and plots the acceleration of a player for a specific game and play,
-    based on their x and y coordinates movement over time, ensuring no negative values for speed and acceleration.
-    
-    :param df: DataFrame containing the data.
-    :param gameId: The game ID to filter the data.
-    :param playId: The play ID to filter the data.
-    :param displayName: The display name of the player.
-    """
-    # Filter the DataFrame
-    filtered_df = df[(df['gameId'] == gameId) & (df['playId'] == playId) & (df['displayName'] == displayName)]
-    
-    if filtered_df.empty:
-        print(f"No data found for game ID: {gameId}, play ID: {playId}, player: {displayName}")
-        return
-    
-    # Assuming 'time' or 'frameId' is in sequential order and represents a uniform time step
-    # Calculate distance moved between each frame
-    filtered_df['distance'] = np.sqrt(np.diff(filtered_df['x'], prepend=filtered_df['x'].iloc[0])**2 + np.diff(filtered_df['y'], prepend=filtered_df['y'].iloc[0])**2)
-    
-    # Calculate speed (distance/time). Assuming each frame represents a uniform time step, e.g., 1 second
-    # Using abs() to ensure no negative values
-    filtered_df['speed'] = np.abs(filtered_df['distance'].diff().fillna(0))  # Using diff() to calculate change in distance
-    
-    # Calculate acceleration (change in speed/time). Assuming each frame represents a uniform time step, e.g., 1 second
-    # Using abs() to ensure no negative values
-    filtered_df['acceleration'] = np.abs(filtered_df['speed'].diff().fillna(0))  # Using diff() to calculate change in speed
-    
-    return filtered_df[['time', 'x', 'y', 'distance', 'speed', 'acceleration']]
-
 
 
 # Example usage
@@ -59,8 +25,10 @@ def speed_acc_plot_interactive(df_weeks, gameId, playId):
     # Initial plot for the first player (as default)
     default_player = players[0]
     default_df = filtered_df[filtered_df['displayName'] == default_player]
-    fig.add_trace(go.Scatter(x=default_df['time'], y=default_df['s'], name='Speed', mode='lines+markers', line=dict(color='red')))
-    fig.add_trace(go.Scatter(x=default_df['time'], y=default_df['a'], name='Acceleration', mode='lines+markers', line=dict(color='blue')))
+    fig.add_trace(
+        go.Scatter(x=default_df['time'], y=default_df['s'], name='Speed', mode='lines+markers', line=dict(color='red')))
+    fig.add_trace(go.Scatter(x=default_df['time'], y=default_df['a'], name='Acceleration', mode='lines+markers',
+                             line=dict(color='blue')))
 
     # Create a dropdown menu for player selection
     buttons = []
@@ -89,10 +57,12 @@ def speed_acc_plot_interactive(df_weeks, gameId, playId):
     )
 
     # Update layout to add titles and make it more informative
-    fig.update_layout(title_text="Player Speed and Acceleration Over Time", xaxis_title="Time", yaxis_title="Yards/Second")
+    fig.update_layout(title_text="Player Speed and Acceleration Over Time", xaxis_title="Time",
+                      yaxis_title="Yards/Second")
     fig.add_layout_image(
         dict(
-            source="https://upload.wikimedia.org/wikipedia/de/1/12/National_Football_League_2008.svg",  # Replace with the actual URL or path
+            source="https://upload.wikimedia.org/wikipedia/de/1/12/National_Football_League_2008.svg",
+            # Replace with the actual URL or path
             xref="paper", yref="paper",
             x=1, y=1,
             sizex=0.04, sizey=0.2,  # Adjust size to fit the corner
@@ -104,6 +74,7 @@ def speed_acc_plot_interactive(df_weeks, gameId, playId):
     )
     # Show the figure
     return fig
+
 
 def distance_heatmap(df_weeks, gameId, playId):
     filtered_df = df_weeks[(df_weeks['gameId'] == gameId) & (df_weeks['playId'] == playId)]
@@ -117,7 +88,7 @@ def distance_heatmap(df_weeks, gameId, playId):
 
     colorscale = [
         [0.0, 'white'],  # transition through white
-        [1.0, 'red']     # end with red
+        [1.0, 'red']  # end with red
     ]
 
     for frame in frames:
@@ -130,7 +101,7 @@ def distance_heatmap(df_weeks, gameId, playId):
                 if i < j:
                     player1 = frame_df[frame_df['displayName'] == player_id1].iloc[0]
                     player2 = frame_df[frame_df['displayName'] == player_id2].iloc[0]
-                    distance = np.sqrt((player1['x'] - player2['x'])**2 + (player1['y'] - player2['y'])**2)
+                    distance = np.sqrt((player1['x'] - player2['x']) ** 2 + (player1['y'] - player2['y']) ** 2)
                     distance_matrix[i, j] = distance
                     distance_matrix[j, i] = distance  # Symmetric
 
@@ -181,8 +152,8 @@ def distance_heatmap(df_weeks, gameId, playId):
             'args': [
                 [f'frame{frame}'],
                 {'frame': {'duration': 300, 'redraw': True},
-                'mode': 'immediate',
-                'transition': {'duration': 300}}
+                 'mode': 'immediate',
+                 'transition': {'duration': 300}}
             ]
         } for frame in frames
     ]

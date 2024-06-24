@@ -1,19 +1,19 @@
 import pandas as pd
-from pathlib import Path
 
 
 def load_week_data(week):
     file_path = f'data/week{week}.csv'
     df_week = pd.read_csv(file_path)
-    df_week = df_week.drop(columns=[ 'dis', 'o', 'nflId', 'dir', 'event', 'route'])
+    df_week = df_week.drop(columns=['dis', 'o', 'nflId', 'dir', 'event', 'route'])
     return df_week
 
 
 def load_plays_data():
     file_path = 'data/plays.csv'
     df_plays = pd.read_csv(file_path)
-    df_plays = df_plays.drop(columns=['yardlineSide', 'defendersInTheBox', 'isDefensivePI', 'epa', 'numberOfPassRushers',
-                                      'typeDropback', 'penaltyCodes', 'penaltyJerseyNumbers', 'offensePlayResult'])
+    df_plays = df_plays.drop(
+        columns=['yardlineSide', 'defendersInTheBox', 'isDefensivePI', 'epa', 'numberOfPassRushers',
+                 'typeDropback', 'penaltyCodes', 'penaltyJerseyNumbers', 'offensePlayResult'])
     return df_plays
 
 
@@ -42,8 +42,6 @@ def process_data():
     print(f"\nAll Weeks Combined - Missing values:\n{missing_values[missing_values > 0]}")
     # Drop duplicates
     all_weeks_df_clean = all_weeks_df.drop_duplicates()
-
-
 
     games_df = load_games_data()
     missing_values = games_df.isna().sum()

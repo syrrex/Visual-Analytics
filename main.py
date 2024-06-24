@@ -1,11 +1,4 @@
-import tkinter as tk
-from api import NFLDataAPI
-from gui import NFLApp
-from gamefield import GameField
+import subprocess
 
 if __name__ == "__main__":
-    #root = tk.Tk()
-    api = NFLDataAPI()
-    game_field = GameField()
-    #app = NFLApp(root, api)
-    #root.mainloop()
+    subprocess.call(["python", "gui.py"])

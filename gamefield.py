@@ -1,144 +1,345 @@
-import pandas as pd
+import plotly.graph_objects as go
 import numpy as np
-import os
-import seaborn as sns
-
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-
-# Credits: 007Chakraphat - Kaggle
-def create_football_field(linenumbers=True,
-                          endzones=True,
-                          highlight_line=False,
-                          highlight_line_number=50,
-                          highlighted_name='Line of Scrimmage',
-                          fifty_is_los=False,
-                          figsize=(12, 6.33)):
-    """
-    Function that plots the football field for viewing plays.
-    Allows for showing or hiding endzones.
-    """
-    rect = patches.Rectangle((0, 0), 120, 53.3, linewidth=0.1,
-                             edgecolor='r', facecolor='darkgreen', zorder=0)
-
-    fig, ax = plt.subplots(1, figsize=figsize)
-    ax.add_patch(rect)
-
-    plt.plot([10, 10, 10, 20, 20, 30, 30, 40, 40, 50, 50, 60, 60, 70, 70, 80,
-              80, 90, 90, 100, 100, 110, 110, 120, 0, 0, 120, 120],
-             [0, 0, 53.3, 53.3, 0, 0, 53.3, 53.3, 0, 0, 53.3, 53.3, 0, 0, 53.3,
-              53.3, 0, 0, 53.3, 53.3, 0, 0, 53.3, 53.3, 53.3, 0, 0, 53.3],
-             color='white')
-    if fifty_is_los:
-        plt.plot([60, 60], [0, 53.3], color='gold')
-        plt.text(62, 50, '<- Player Yardline at Snap', color='gold')
-    # Endzones
-    if endzones:
-        ez1 = patches.Rectangle((0, 0), 10, 53.3,
-                                linewidth=0.1,
-                                edgecolor='r',
-                                facecolor='blue',
-                                alpha=0.2,
-                                zorder=0)
-        ez2 = patches.Rectangle((110, 0), 120, 53.3,
-                                linewidth=0.1,
-                                edgecolor='r',
-                                facecolor='blue',
-                                alpha=0.2,
-                                zorder=0)
-        ax.add_patch(ez1)
-        ax.add_patch(ez2)
-    plt.xlim(0, 120)
-    plt.ylim(-5, 58.3)
-    plt.axis('off')
-    if linenumbers:
-        for x in range(20, 110, 10):
-            numb = x
-            if x > 50:
-                numb = 120 - x
-            plt.text(x, 5, str(numb - 10),
-                     horizontalalignment='center',
-                     fontsize=20,  # fontname='Arial',
-                     color='white')
-            plt.text(x - 0.95, 53.3 - 5, str(numb - 10),
-                     horizontalalignment='center',
-                     fontsize=20,  # fontname='Arial',
-                     color='white', rotation=180)
-    if endzones:
-        hash_range = range(11, 110)
-    else:
-        hash_range = range(1, 120)
-
-    for x in hash_range:
-        ax.plot([x, x], [0.4, 0.7], color='white')
-        ax.plot([x, x], [53.0, 52.5], color='white')
-        ax.plot([x, x], [22.91, 23.57], color='white')
-        ax.plot([x, x], [29.73, 30.39], color='white')
-
-    if highlight_line:
-        hl = highlight_line_number + 10
-        plt.plot([hl, hl], [0, 53.3], color='yellow')
-        plt.text(hl + 2, 50, '<- {}'.format(highlighted_name),
-                 color='yellow')
-    return fig, ax
+import pandas as pd
 
 
-def try_printing_players():
+def animate_play(gameId, playId, plays, weeks):
+    # Read data from CSV
+    data = plays
+    data1 = weeks
 
-    # Example usage
-    train = pd.read_csv('data/train.csv', low_memory=False)
-    fig, ax = create_football_field()
-    train.query("PlayId == 20170907000118 and Team == 'away'") \
-        .plot(x='X', y='Y', kind='scatter', ax=ax, color='orange', s=30, legend='Away')
-    train.query("PlayId == 20170907000118 and Team == 'home'") \
-        .plot(x='X', y='Y', kind='scatter', ax=ax, color='blue', s=30, legend='Home')
-    plt.title('Play # 20170907000118')
-    plt.legend()
-    plt.show()
+    # Filter data for the specific gameId and playId
+    play_data = data1[(data1['gameId'] == gameId) & (data1['playId'] == playId)]
+    information_data = data[(data['gameId'] == gameId) & (data['playId'] == playId)]
 
+    # Sample data for demonstration
+    line_of_scrimmage = information_data.iloc[0]['absoluteYardlineNumber']
+    first_down_marker = information_data.iloc[0]['absoluteYardlineNumber'] + information_data.iloc[0]['yardsToGo']
+    down = information_data.iloc[0]['down']
+    quarter = information_data.iloc[0]['quarter']
+    gameClock = information_data.iloc[0]['gameClock']
+    playDescription = "Sample Play Description"
 
-    # LOS
-    playid = 20181230154157
-    train.query("PlayId == @playid").head()
+    scale = 8.5
+    marker_size = 23 * (scale / 10)  # Adjust the size of the markers
+    text_size = 13 * (scale / 10)  # Adjust the size of the text
+    title_size = 24 * (scale / 10)  # Adjust the size of the title
+    legend_size = 16 * (scale / 10)  # Adjust the size of the legend
+    annotation_size = 16 * (scale / 10)  # Adjust the size of the annotations
+    field_number_size = 30 * (scale / 10)  # Adjust the size of the field numbers
+    team_name_size = 32 * (scale / 10)  # Adjust the size of the team names
 
-    yl = train.query("PlayId == @playid")['YardLine'].tolist()[0]
-    fig, ax = create_football_field(highlight_line=True,
-                                    highlight_line_number=yl + 54)
-    train.query("PlayId == @playid and Team == 'away'") \
-        .plot(x='X', y='Y', kind='scatter', ax=ax, color='orange', s=30, legend='Away')
-    train.query("PlayId == @playid and Team == 'home'") \
-        .plot(x='X', y='Y', kind='scatter', ax=ax, color='blue', s=30, legend='Home')
-    plt.title(f'Play # {playid}')
-    plt.legend()
-    plt.show()
+    # initialize plotly start and stop buttons for animation
+    updatemenus_dict = [
+        {
+            "buttons": [
+                {
+                    "args": [None, {"frame": {"duration": 100, "redraw": False},
+                                    "fromcurrent": True, "transition": {"duration": 0}}],
+                    "label": "Play",
+                    "method": "animate"
+                },
+                {
+                    "args": [[None], {"frame": {"duration": 0, "redraw": False},
+                                      "mode": "immediate",
+                                      "transition": {"duration": 0}}],
+                    "label": "Pause",
+                    "method": "animate"
+                }
+            ],
+            "direction": "left",
+            "pad": {"r": 10, "t": 87},
+            "showactive": False,
+            "type": "buttons",
+            "x": 0.1,
+            "xanchor": "right",
+            "y": -0.15,
+            "yanchor": "top"
+        }
+    ]
+    # initialize plotly slider to show frame position in animation
+    sliders_dict = {
+        "active": 0,
+        "yanchor": "top",
+        "xanchor": "left",
+        "currentvalue": {
+            "font": {"size": 18, "weight": "bold"},  # Set font weight to bold
+            "prefix": "Frame:",
+            "visible": True,
+            "xanchor": "right"
+        },
+        "transition": {"duration": 200, "easing": "cubic-in-out"},
+        "pad": {"b": 10, "t": 50},
+        "len": 0.9,
+        "x": 0.1,
+        "y": -0.15,
+        "steps": []
+    }
 
+    #frames
+    frames = []
+    for frameId in range(1, len(pd.unique(play_data['frameId']))):  # Adjust the range according to your data
+        frame_data_home = []
+        frame_data_away = []
+        frame_data_football = []
+        for _, player in play_data[play_data['frameId'] == frameId].iterrows():
+            # Players with team colors and jersey numbers
+            x_val, y_val = player['x'], player['y']  # Get player coordinates
+            if player["displayName"] == "Football":
+                player_info = "Football"
+            else:
+                player_info = f"{player['displayName']} ({int(player['jerseyNumber'])})"  # Player info for legend
 
-    # Another example:
-    train2021 = pd.read_csv('data/week11.csv')
+            if player['team'] == 'away':
+                team_color = 'blue'  # Assign team color
+                frame_data_away.append(
+                    go.Scatter(
+                        x=[x_val],
+                        y=[y_val],
+                        mode='markers+text',  # Added '+text' back here
+                        marker=go.scatter.Marker(
+                            color=team_color,
+                            size=marker_size,  # Increase dot size
+                            line=dict(width=2, color='Black'),
+                            opacity=0.8
+                        ),
+                        text=[str(int((player['jerseyNumber'])))],  # Display jersey number
+                        textfont=dict(
+                            family="Courier New, monospace",
+                            size=text_size,  # Increase font size
+                            color="white",
+                            weight="bold"
+                        ),
+                        name=player_info,  # Display player info in the legend
+                        hoverinfo='text'
+                    )
+                )
+            elif player['team'] == 'home':
+                team_color = 'red'  # Assign team color
+                frame_data_home.append(
+                    go.Scatter(
+                        x=[x_val],
+                        y=[y_val],
+                        mode='markers+text',  # Added '+text' back here
+                        marker=go.scatter.Marker(
+                            color=team_color,
+                            size=marker_size,  # Increase dot size
+                            line=dict(width=2, color='Black'),
+                            opacity=0.8
+                        ),
+                        text=[str(int((player['jerseyNumber'])))],  # Display jersey number
+                        textfont=dict(
+                            family="Courier New, monospace",
+                            size=text_size,  # Increase font size
+                            color="white",
+                            weight="bold"
+                        ),
+                        name=player_info,  # Display player info in the legend
+                        hoverinfo='text'
+                    )
+                )
+            else:  # Football
+                team_color = "brown"  # Assign team color
+                player_info = "Football"
+                frame_data_football.append(
+                    go.Scatter(
+                        x=[x_val],
+                        y=[y_val],
+                        mode='markers+text',  # Added '+text' back here
+                        marker=go.scatter.Marker(
+                            color=team_color,
+                            size=marker_size,  # Increase dot size
+                            line=dict(width=2, color='White')
+                        ),
+                        text=[str("F")],  # Display jersey number
+                        textfont=dict(
+                            family="Courier New, monospace",
+                            size=text_size,  # Increase font size
+                            color="white",
+                            weight="bold"
+                        ),
+                        name=player_info,  # Display player info in the legend
+                        hoverinfo='text'
+                    )
+                )
+        frame_data = frame_data_home + frame_data_away + frame_data_football
+        frames.append(go.Frame(data=frame_data, name=str(frameId)))
 
-    example_play_home = train2021.query('gameId == 2018111900 and playId == 5577 and team == "home"')
-    example_play_away = train2021.query('gameId == 2018111900 and playId == 5577 and team == "away"')
+        # add frame to slider
+        slider_step = {"args": [
+            [frameId],
+            {"frame": {"duration": 100, "redraw": False},
+             "mode": "immediate",
+             "transition": {"duration": 0}}
+        ],
+            "label": str(frameId),
+            "method": "animate"}
+        sliders_dict["steps"].append(slider_step)
+        frames.append(go.Frame(data=frame_data, name=str(frameId)))
 
-    fig, ax = create_football_field()
-    example_play_home.query('event == "ball_snap"').plot(x='x', y='y', kind='scatter', ax=ax, color='orange', s=30,
-                                                         legend='Away')
-    example_play_away.query('event == "ball_snap"').plot(x='x', y='y', kind='scatter', ax=ax, color='blue', s=30,
-                                                         legend='Home')
-    plt.title('Game #2018111900 Play #5577 at Ball Snap')
-    plt.legend()
-    plt.show()
+    #information for figure
+    layout = go.Layout(
+        autosize=False,
+        width=120 * scale,
+        height=60 * scale,
+        xaxis=dict(range=[0, 120], autorange=False, tickmode='array', tickvals=np.arange(10, 111, 10).tolist(),
+                   showticklabels=False),
+        yaxis=dict(range=[0, 53.3], autorange=False, showgrid=False, showticklabels=False),
 
-    fig, ax = create_football_field()
-    example_play_home.plot(x='x', y='y', kind='scatter', ax=ax, color='orange', s=30, legend='Away')
-    example_play_away.plot(x='x', y='y', kind='scatter', ax=ax, color='blue', s=30, legend='Home')
-    plt.title('Game #2018111900 Play #5577 at Ball Snap')
-    plt.legend()
-    plt.show()
+        plot_bgcolor='#00B140',
+        # Create title and add play description at the bottom of the chart for better visual appeal
+        title=dict(
+            text=f"GameId: {gameId}, PlayId: {playId}<br>{gameClock} {quarter}Q" + "<br>" * 19 + f"{playDescription}",
+            x=0.5,  # Center the title
+            font=dict(
+                size=title_size,  # Increase font size
+                color='black',
+                family='Courier New, monospace',
+                weight='bold'  # Make the title bold
+            )
+        ),
+        updatemenus=updatemenus_dict,
+        sliders=[sliders_dict],
+        legend=dict(
+            x=1.02,
+            y=1,
+            traceorder='normal',
+            bgcolor='rgba(255, 255, 255, 0.5)',
+            bordercolor='rgba(255, 255, 255, 0.5)',
+            borderwidth=1,
+            font=dict(
+                family="Courier New, monospace",
+                size=legend_size,
+                color="black"
+            )
+        )
+    )
 
+    fig = go.Figure(
+        data=frames[0]["data"],
+        layout=layout,
+        frames=frames[1:]
+    )
+    # Create First Down Markers 
+    for y_val in [0, 53]:
+        fig.add_annotation(
+            x=first_down_marker,
+            y=y_val,
+            text=str(down),
+            showarrow=False,
+            font=dict(
+                family="Courier New, monospace",
+                size=annotation_size,
+                color="black"
+            ),
+            align="center",
+            bordercolor="black",
+            borderwidth=2,
+            borderpad=4,
+            bgcolor="#ff7f0e",
+            opacity=1
+        )
 
-try_printing_players()
+    #lines on the field
+    for x_val in np.arange(15, 111, 10):
+        fig.add_vline(x=x_val, line_width=3, line_color="white", opacity=0.3)
 
+    #line of scrimamage
+    fig.add_vline(x=line_of_scrimmage, line_width=4, line_dash="dash", line_color="red", opacity=0.7)
 
-class GameField:
-    def __init__(self):
-        self.whatever = 0
+    # Add First down line 
+    fig.add_vline(x=first_down_marker, line_width=4, line_dash="dash", line_color="yellow", opacity=0.7)
+
+    #add numbers on field
+    fig.add_trace(
+        go.Scatter(
+            x=np.arange(20, 110, 10),
+            y=[5] * len(np.arange(20, 110, 10)),
+            mode='text',
+            text=list(map(str, list(np.arange(20, 61, 10) - 10) + list(np.arange(40, 9, -10)))),
+            textfont=dict(
+                size=field_number_size,
+                family="Courier New, monospace",
+                color="#ffffff"
+            ),
+            showlegend=False,
+            hoverinfo='none'
+        )
+    )
+
+    fig.add_trace(
+        go.Scatter(
+            x=np.arange(20, 110, 10),
+            y=[53.5 - 5] * len(np.arange(20, 110, 10)),
+            mode='text',
+            text=list(map(str, list(np.arange(20, 61, 10) - 10) + list(np.arange(40, 9, -10)))),
+            textfont=dict(
+                size=field_number_size,
+                family="Courier New, monospace",
+                color="#ffffff"
+            ),
+            showlegend=False,
+            hoverinfo='none'
+        )
+    )
+
+    # Add Endzone Colors 
+    endzone_colors = ['#4B0082', '#4B0082']  # purple endzone
+    for i, x_min in enumerate([0, 110]):
+        fig.add_trace(
+            go.Scatter(
+                x=[x_min, x_min, x_min + 10, x_min + 10, x_min],
+                y=[0, 53.5, 53.5, 0, 0],
+                fill="toself",
+                fillcolor=endzone_colors[i],
+                mode="lines",
+                line=dict(
+                    color="white",
+                    width=3
+                ),
+                opacity=0.5,
+                showlegend=False,
+                hoverinfo="skip"
+            )
+        )
+
+    # Add Team Abbreviations in EndZone's
+    for x_min in [0, 110]:
+        if x_min == 0:
+            angle = 270
+            teamName = "Home"
+        else:
+            angle = 90
+            teamName = "Visitor"
+        fig.add_annotation(
+            x=x_min + 5,
+            y=53.5 / 2,
+            text=teamName,
+            showarrow=False,
+            font=dict(
+                family="Courier New, monospace",
+                size=team_name_size,
+                color="White"
+            ),
+            textangle=angle
+        )
+    fig.update_layout(
+        legend=dict(
+            x=0.5,
+            y=-0.07,
+            traceorder="normal",
+            font=dict(
+                family="sans-serif",
+                size=text_size,
+                color="black"
+            ),
+            bordercolor="Black",
+            borderwidth=0,
+            orientation="h",
+            xanchor="center",
+            yanchor="top",
+            tracegroupgap=10
+        )
+    )
+
+    return fig
