@@ -1,0 +1,8 @@
+python==3.12
+dash
+numpy
+plotly
+pandas
+dash_ag_grid
+dash_bootstrap_components
+matplot

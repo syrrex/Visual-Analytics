@@ -26,7 +26,7 @@ def load_games_data():
 
 def load_all_weeks():
     all_weeks = []
-    for week in range(1, 2):
+    for week in range(1, 18):
         week_df = load_week_data(week)
         all_weeks.append(week_df)
     all_weeks_df = pd.concat(all_weeks, ignore_index=True)
