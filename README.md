@@ -17,3 +17,6 @@ It is important to use 3.12. Other versions might not work.
 ### Data
 https://www.kaggle.com/c/nfl-big-data-bowl-2021/data
 You need to create folder called data for the project and import the data from the link.
+
+## Run Project
+Run main. If it doesnt work you can run gui.py directly. Click on the link displayed in terminal. 
