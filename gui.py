@@ -53,13 +53,15 @@ keys = range(len(play_ids))
 # Create the marks dictionary
 marks = {key: str(play_id) for key, play_id in zip(keys, play_ids)}
 
+# Create Dash app with Bootstrap theme
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
+# Create initial figures for the plots
 fig = animate_play(gameId, playid, df_plays, df_weeks)
-
 speed_fig = speed_acc_plot_interactive(df_weeks, gameId, playid)
 distance_fig = distance_heatmap(df_weeks, gameId, playid)
 
+# Define layout of the app
 app.layout = dbc.Container([
     html.H1("American Football Analysis Application", className='mb-2', style={'textAlign': 'center'}),
 
@@ -142,14 +144,14 @@ app.layout = dbc.Container([
     ])])
 
 
-# Callback for the week
+# Callback to generate Game options
 def getOptions():
     gameOptions = []
     for index, row in df_games.iterrows():
         gameOptions.append({'label': f"{row['homeTeamAbbr']} vs {row['visitorTeamAbbr']}", 'value': row['gameId']})
     return gameOptions
 
-
+# Callback to update week dropdown options
 @app.callback(
     Output("week", "options"),
     Output("week", "value"),
@@ -174,7 +176,7 @@ def update_week_options(selectedWeek, selectedHome, selectedAway, selectedGameID
 
     return week_options, None
 
-
+# Callback to update home team dropdown options
 @app.callback(
     Output("homeTeam", "options"),
     Output("homeTeam", "value"),
@@ -199,7 +201,7 @@ def update_home_team_dropdown(selectedWeek, selectedHome, selectedAway, selected
 
     return home_options, None
 
-
+# Callback to update away team dropdown options
 @app.callback(
     Output("awayTeam", "options"),
     Output("awayTeam", "value"),
@@ -209,7 +211,7 @@ def update_home_team_dropdown(selectedWeek, selectedHome, selectedAway, selected
     Input("game_id", "value"),
     Input("gameSelector", "value")
 )
-def update_away_team_value(selectedWeek, selectedHome, selectedAway, selectedGameID, selectedGame):
+def update_away_team_options(selectedWeek, selectedHome, selectedAway, selectedGameID, selectedGame):
     ctx = dash.callback_context
     trigger = 'None' if not ctx.triggered else ctx.triggered[0]['prop_id'].split('.')[0]
     away_options = [{'label': team, 'value': team} for team in df_games["visitorTeamAbbr"].unique()]
@@ -224,7 +226,7 @@ def update_away_team_value(selectedWeek, selectedHome, selectedAway, selectedGam
 
     return away_options, None
 
-
+# Callback to update game selector dropdown options
 @app.callback(
     Output("gameSelector", "options"),
     Output("gameSelector", "value"),
@@ -254,7 +256,7 @@ def update_gameSelector(selectedWeek, selectedHome, selectedAway, selectedGame, 
                    index, row in filtered_games.iterrows()]
     return gameOptions, None
 
-
+# Callback to update game ID dropdown options
 @app.callback(
     Output("game_id", "options"),
     Output("game_id", "value"),
@@ -283,7 +285,7 @@ def update_game_id_options(selectedHome, selectedAway, selectedWeek, selectedGam
     options = filtered_games["gameId"].unique()
     return options, None
 
-
+# Callback to enable the show button
 @app.callback(
     Output("showButton", "disabled"),
     Input("week", "value"),
@@ -295,7 +297,7 @@ def update_game_id_options(selectedHome, selectedAway, selectedWeek, selectedGam
 def enable_show_button(week, game_id, home_team, away_team, quarter):
     return not week or not game_id or not home_team or not away_team or not quarter
 
-
+# Update the plot based on the selected game and play
 def update_plot(game_id, play_id):
     fig = animate_play(game_id, play_id, df_plays, df_weeks)
     return fig, {'displayModeBar': False}
@@ -313,7 +315,7 @@ def update_values(game_id, play_id):
         selected_playId = play_id
     print(selected_gameId, selected_playId)
 
-
+# Callback for the play_id slider
 @app.callback(
     Output("play_id_slider", "min"),
     Output("play_id_slider", "max"),
@@ -335,7 +337,7 @@ def update_slider(game_id):
     # marks = {key: str(play_id) for key, play_id in zip(keys, play_ids)}
     return min_value, max_value, value, marks
 
-
+# Callback to update quarter dropdown options
 @app.callback(
     Output("quarter", "options"),
     Output("quarter", "value"),
@@ -350,7 +352,7 @@ def update_quarter_options(selectedGame, selectedQuarter):
     else:
         return [], None, True
 
-
+# Callback to update down dropdown options
 @app.callback(
     Output("down", "options"),
     Output("down", "disabled"),
@@ -365,7 +367,7 @@ def update_down_options(selectedGame, selectedQuarter):
         return [], True
 
 
-# Callback for the play_id
+# Callback to update play_id dropdown options
 @app.callback(
     Output("play_id", "options"),
     Output("play_id", "disabled"),
@@ -383,7 +385,7 @@ def update_play_id_options(game_id, home_team, away_team, quarter, down):
     else:
         return [], True
 
-
+# Callback to update the card info
 @app.callback(
     Output("cardInfo", "children"),
     Input("game_id", "value"),
@@ -402,7 +404,7 @@ def update_card_info(game_id, play_id):
 
     return dbc.CardBody(text)
 
-
+# Callback to update the additional info
 @app.callback(
     Output("additionalInfo", "children"),
     Input("game_id", "value"),
@@ -423,7 +425,7 @@ def update_card_adinfo(game_id, play_id):
 
     return dbc.CardBody(text)
 
-
+# Callback to update the plot
 @app.callback(
     Output("football-plotly", "figure"),
     Output("football-plotly", "config"),
