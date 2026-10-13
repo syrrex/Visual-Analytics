@@ -72,7 +72,7 @@ How it is built:
 
 **1. Get the data.** Download the CSVs from [Kaggle](https://www.kaggle.com/competitions/nfl-big-data-bowl-2021/data) and place `games.csv`, `plays.csv`, `players.csv` and `week1.csv` … `week17.csv` in `data/`.
 
-**2. Create the environment.**
+**2. Install dependencies** (Python 3.12):
 
 ```bash
 # Option A: the exact environment (pinned on Windows)
@@ -80,26 +80,27 @@ conda env create -f environment.yml
 conda activate working-dir-va
 
 # Option B: any OS
-pip install dash==2.17.0 dash-bootstrap-components==1.6.0 dash-ag-grid==31.2.0 plotly==5.22.0 pandas==2.2.2 numpy==1.26.4
+pip install dash==2.17.0 dash-bootstrap-components==1.6.0 dash-ag-grid==31.2.0 plotly==5.22.0 pandas==2.2.2 numpy==1.26.4 matplotlib==3.9.0
 ```
 
-**3. Start the dashboard.**
+**3. Start the dashboard** from the repository root (the data paths are relative):
 
 ```bash
-python [app.py]
+python gui.py
 ```
 
-Then open http://127.0.0.1:8050 in your browser. The first load takes a while because all 17 weekly files are read into memory.
+Then open http://127.0.0.1:8002 in your browser. The first load takes a while because all 17 weekly files are read into memory. Tip: pause the animation before selecting the next play.
 
 ## Repository structure
 
 ```
 .
-├── [app.py]                                # Dash dashboard (entry point)
-├── [api / data module]                     # data loading & preprocessing
-├── [plot modules]                          # Plotly figures (field animation, speed, proximity)
-├── main.py, api.py, gui.py                 # early Tkinter prototype (superseded by Dash)
-├── environment.yml                         # conda environment
+├── gui.py                                  # Dash dashboard: layout, linked filters, callbacks (entry point)
+├── main.py                                 # convenience launcher for gui.py
+├── api.py                                  # data loading & preprocessing (NFLDataAPI)
+├── gamefield.py                            # animated football field (Plotly)
+├── additionalplots.py                      # speed/acceleration chart & proximity heatmap
+├── requirements.txt / environment.yml      # dependencies
 ├── data/                                   # Kaggle CSVs (not versioned, see "Run it yourself")
 ├── assets/                                 # screenshots for this README
 ├── Visual_Analytics_Report_Group_25.pdf    # full project report
